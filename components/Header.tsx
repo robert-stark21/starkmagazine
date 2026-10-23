@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { CATEGORIES, type Lang } from "@/lib/sources";
 import { UI } from "@/lib/lang";
-import { CatNav, LangToggle } from "./client";
+import { CatNav, KindleToggle, LangToggle } from "./client";
 import { Logo } from "./Logo";
 
-export function Header({ lang, updated }: { lang: Lang; updated: Date }) {
+export function Header({ lang, updated, kindle }: { lang: Lang; updated: Date; kindle: boolean }) {
   const t = UI[lang];
   const today = new Intl.DateTimeFormat(lang === "vi" ? "vi-VN" : "en-US", {
     weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Ho_Chi_Minh",
@@ -19,6 +19,7 @@ export function Header({ lang, updated }: { lang: Lang; updated: Date }) {
         <div className="tag">{t.tagline}</div>
         <div className="right">
           <span className="date"><span className="cap">{today}</span> · {t.updated} {time}</span>
+          <KindleToggle on={kindle} lang={lang} />
           <LangToggle lang={lang} />
         </div>
       </div>

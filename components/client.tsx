@@ -18,6 +18,81 @@ export function LangToggle({ lang }: { lang: "vi" | "en" }) {
   );
 }
 
+/**
+ * Kindle mode switch: a matte black-and-white e-ink look. The choice lives in a cookie so
+ * the server renders the right mode on the next visit (no flash); here it flips at once.
+ */
+export function KindleToggle({ on, lang }: { on: boolean; lang: "vi" | "en" }) {
+  const [active, setActive] = useState(on);
+  const label = lang === "vi" ? "Chế độ Kindle" : "Kindle mode";
+  const flip = () => {
+    const next = !active;
+    setActive(next);
+    document.documentElement.classList.toggle("kindle", next);
+    document.cookie = `mode=${next ? "kindle" : "normal"}; path=/; max-age=31536000; samesite=lax`;
+  };
+  return (
+    <button className={`kindle-toggle${active ? " on" : ""}`} onClick={flip} aria-pressed={active} aria-label={label} title={label}>
+      {/* An e-reader: a page with lines of text */}
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+        <rect x="5" y="2.5" width="14" height="19" rx="2.5" />
+        <path d="M8.5 7h7M8.5 10.5h7M8.5 14h4.5" />
+      </svg>
+    </button>
+  );
+}
+
+/**
+ * Film grain over the page (after React Bits' Noise): random grey pixels redrawn about
+ * ten times a second on a half-resolution canvas, shown at low opacity by CSS. A still
+ * frame on touch devices and with reduced motion; paused while the tab is hidden.
+ */
+export function Grain() {
+  const ref = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const canvas = ref.current;
+    const ctx = canvas?.getContext("2d");
+    if (!canvas || !ctx) return;
+    const TILE = 128;
+    const tile = document.createElement("canvas");
+    tile.width = tile.height = TILE;
+    const tctx = tile.getContext("2d")!;
+    const img = tctx.createImageData(TILE, TILE);
+    const draw = () => {
+      const d = img.data;
+      for (let i = 0; i < d.length; i += 4) {
+        const v = (Math.random() * 255) | 0;
+        d[i] = d[i + 1] = d[i + 2] = v;
+        d[i + 3] = 255;
+      }
+      tctx.putImageData(img, 0, 0);
+      ctx.fillStyle = ctx.createPattern(tile, "repeat")!;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    };
+    const size = () => {
+      // Half resolution: each grain covers about 2x2 screen pixels.
+      canvas.width = Math.ceil(innerWidth / 2);
+      canvas.height = Math.ceil(innerHeight / 2);
+      draw();
+    };
+    size();
+    addEventListener("resize", size);
+    const still = matchMedia("(prefers-reduced-motion: reduce), (hover: none)").matches;
+    let timer: ReturnType<typeof setInterval> | undefined;
+    const start = () => { if (!still && !timer) timer = setInterval(draw, 100); };
+    const stop = () => { clearInterval(timer); timer = undefined; };
+    const onVis = () => (document.hidden ? stop() : start());
+    document.addEventListener("visibilitychange", onVis);
+    start();
+    return () => {
+      stop();
+      removeEventListener("resize", size);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
+  return <canvas ref={ref} className="grain" aria-hidden="true" />;
+}
+
 /** Re-renders the page every 10 minutes so new stories appear without a reload. */
 export function AutoRefresh({ seconds }: { seconds: number }) {
   const router = useRouter();

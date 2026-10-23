@@ -6,6 +6,11 @@ export async function getLang(): Promise<Lang> {
   return c === "en" ? "en" : "vi";
 }
 
+/** Kindle (e-ink) reading mode, chosen with the header switch and kept in a cookie. */
+export async function getKindle(): Promise<boolean> {
+  return (await cookies()).get("mode")?.value === "kindle";
+}
+
 export const UI = {
   vi: {
     tagline: "Tin tức tổng hợp, cập nhật mỗi 10 phút",
