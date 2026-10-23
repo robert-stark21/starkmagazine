@@ -253,27 +253,37 @@ export async function translateMany(texts: string[], target: Lang): Promise<stri
   const out = texts.slice();
   const todo: number[] = [];
   const claimed = new Set<string>();
+  const waitFor = new Map<number, Promise<unknown>>(); // texts another request is translating
+  let release!: () => void;
+  const mine = new Promise<void>((r) => (release = r));
   texts.forEach((t, i) => {
     if (!t.trim()) return;
     const key = `${target}|${t}`;
     const hit = cache.get(key);
     if (hit !== undefined) out[i] = hit;
-    // Another request is already translating this text: don't send it twice.
-    else if (!inFlight.has(key) || claimed.has(key)) {
-      inFlight.add(key);
+    // Another request is already translating this text: wait for it instead of sending it twice.
+    else if (inFlight.has(key) && !claimed.has(key)) waitFor.set(i, inFlight.get(key)!);
+    else {
+      inFlight.set(key, mine);
       claimed.add(key);
       todo.push(i);
     }
   });
-  if (!todo.length) return out;
   try {
-    return await translatePending(texts, target, out, todo);
+    if (todo.length) await translatePending(texts, target, out, todo);
   } finally {
     claimed.forEach((k) => inFlight.delete(k));
+    release();
   }
+  if (waitFor.size) {
+    await Promise.all(waitFor.values());
+    for (const i of waitFor.keys()) out[i] = cache.get(`${target}|${texts[i]}`) ?? texts[i];
+  }
+  return out;
 }
 
-const inFlight = new Set<string>();
+/** Texts being translated right now, with the request doing it (resolves when it is done). */
+const inFlight = new Map<string, Promise<void>>();
 
 async function translatePending(texts: string[], target: Lang, out: string[], todo: number[]): Promise<string[]> {
 

@@ -2,11 +2,10 @@ import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllArticles, getArticle, localize, type Article } from "@/lib/feeds";
-import { getFullText, type Block } from "@/lib/fulltext";
+import type { Block } from "@/lib/fulltext";
+import { prepareBody } from "@/lib/article";
 import { getCategory, type Lang } from "@/lib/sources";
 import { getLang, timeAgo, UI } from "@/lib/lang";
-import { readingTime, splitSentences, summarize } from "@/lib/text";
-import { translateMany } from "@/lib/translate";
 import { ArticleCard } from "@/components/ArticleCard";
 import { ActiveCategory, ProseImage } from "@/components/client";
 import { VideoEmbed } from "@/components/VideoEmbed";
@@ -81,22 +80,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
 /** Meta column and reading column. Streams in after the top. */
 async function ArticleBody({ article, lang }: { article: Article; lang: Lang }) {
   const t = UI[lang];
-  const full = process.env.MOCK_FEEDS === "1" ? null : await getFullText(article.link);
-  let blocks: Block[] = limitText(full?.blocks ?? splitParagraphs(article.text).map((text) => ({ type: "text", text })), 60);
-  // A video from the feed goes first when the page itself had none.
-  if (article.video && !blocks.some((b) => b.type === "video")) blocks = [{ type: "video", ...article.video }, ...blocks];
-  const plain = blocks.flatMap((b) => (b.type === "text" ? [b.text] : [])).join(" ");
-  const minutes = readingTime(plain);
-  let summary = summarize(plain, 3);
-
-  if (article.lang !== lang) {
-    // Translate summary, paragraphs and captions in one go.
-    const parts = blocks.map((b) => (b.type === "text" ? b.text : b.caption ?? ""));
-    const tr = await translateMany([...summary, ...parts], lang);
-    summary = tr.slice(0, summary.length);
-    const out = tr.slice(summary.length);
-    blocks = blocks.map((b, i) => (b.type === "text" ? { ...b, text: out[i] } : b.caption ? { ...b, caption: out[i] } : b));
-  }
+  // Full text, summary and translation (usually ready in the caches thanks to the warm-up).
+  const { full, blocks, summary, minutes } = await prepareBody(article, lang);
 
   // When the feed had no picture, use the page's main image.
   const hero = !article.image && full?.image;
@@ -218,25 +203,4 @@ async function Related({ article, lang, color }: { article: Article; lang: Lang;
       </div>
     </section>
   );
-}
-
-/** Keeps at most `max` text blocks (images in between are kept). */
-function limitText(blocks: Block[], max: number): Block[] {
-  let n = 0;
-  const out: Block[] = [];
-  for (const b of blocks) {
-    if (b.type === "text" && ++n > max) break;
-    out.push(b);
-  }
-  return out;
-}
-
-function splitParagraphs(text: string): string[] {
-  const parts = text.split(/\n+/).map((s) => s.trim()).filter(Boolean);
-  if (parts.length > 1) return parts;
-  // One long block: group sentences into paragraphs of three.
-  const s = splitSentences(text);
-  const out: string[] = [];
-  for (let i = 0; i < s.length; i += 3) out.push(s.slice(i, i + 3).join(" "));
-  return out.length ? out : parts;
 }

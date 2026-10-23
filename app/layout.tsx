@@ -2,7 +2,7 @@ import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { getKindle, getLang } from "@/lib/lang";
 import { Suspense } from "react";
-import { AutoRefresh, CardTransitions, Grain, NavProgress, Spotlight } from "@/components/client";
+import { AutoRefresh, CardPrefetch, CardTransitions, Grain, NavProgress, Spotlight } from "@/components/client";
 import { Header } from "@/components/Header";
 import { lastUpdated, REFRESH_SECONDS } from "@/lib/feeds";
 import { Literata, Manrope } from "next/font/google";
@@ -44,6 +44,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <AutoRefresh seconds={REFRESH_SECONDS} />
         <Spotlight />
         <CardTransitions />
+        <CardPrefetch />
         <footer className="foot-site">
           <div className="wrap">
             © STARK · {lang === "vi" ? "Nội dung thuộc về các nguồn báo gốc." : "All content belongs to the original publishers."}

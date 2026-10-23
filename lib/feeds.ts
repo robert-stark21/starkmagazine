@@ -5,6 +5,7 @@ import { translateMany } from "./translate";
 import { videoFromUrl } from "./fulltext";
 import { mockArticles } from "./mock";
 import { SCRAPERS } from "./scrapers";
+import { warmLatest } from "./warm";
 
 export const REFRESH_SECONDS = 600; // 10 minutes
 
@@ -223,7 +224,8 @@ export function refreshFeeds(): Promise<Article[]> {
       .sort((a, b) => b.published.localeCompare(a.published));
     if (articles.length) {
       memo = { at: Date.now(), articles };
-      void pretranslate(articles);
+      // Titles first, then the bodies of the newest stories, so they open instantly.
+      void pretranslate(articles).then(() => warmLatest(articles));
     } else if (memo) {
       memo = { ...memo, at: Date.now() }; // all feeds failed: keep old articles, try again later
     }

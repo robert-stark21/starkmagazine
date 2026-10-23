@@ -1,5 +1,8 @@
 import { Readability } from "@mozilla/readability";
 import { parseHTML } from "linkedom";
+import { createHash } from "node:crypto";
+import fs from "node:fs";
+import path from "node:path";
 
 export type Block =
   | { type: "text"; text: string; heading?: boolean }
@@ -14,6 +17,30 @@ export type FullText = {
 
 const cache = new Map<string, { at: number; value: FullText | null }>();
 const FAIL_TTL = 10 * 60_000; // retry failed pages after 10 minutes
+const DISK_TTL = 24 * 3_600_000; // extracted pages kept on disk for a day
+const DISK_DIR = path.join(process.env.VERCEL ? "/tmp" : path.join(process.cwd(), ".cache"), "fulltext");
+const inflight = new Map<string, Promise<FullText | null>>();
+
+const diskFile = (url: string) => path.join(DISK_DIR, createHash("sha1").update(url).digest("hex") + ".json");
+
+/** A page extracted earlier (survives restarts), or undefined. */
+async function readDisk(url: string): Promise<FullText | undefined> {
+  try {
+    const file = diskFile(url);
+    const st = await fs.promises.stat(file);
+    if (Date.now() - st.mtimeMs > DISK_TTL) return undefined;
+    return JSON.parse(await fs.promises.readFile(file, "utf8"));
+  } catch {
+    return undefined;
+  }
+}
+
+function saveDisk(url: string, value: FullText) {
+  fs.promises
+    .mkdir(DISK_DIR, { recursive: true })
+    .then(() => fs.promises.writeFile(diskFile(url), JSON.stringify(value)))
+    .catch(() => {});
+}
 const MAX_IMAGES = 30;
 const MAX_VIDEOS = 8;
 
@@ -439,6 +466,21 @@ function awardPage(document: any, url: string): FullText | null {
 export async function getFullText(url: string): Promise<FullText | null> {
   const hit = cache.get(url);
   if (hit && (hit.value || Date.now() - hit.at < FAIL_TTL)) return hit.value;
+  // The page and the warm-up may ask for the same article at once: fetch it only once.
+  let job = inflight.get(url);
+  if (!job) {
+    job = extract(url).finally(() => inflight.delete(url));
+    inflight.set(url, job);
+  }
+  return job;
+}
+
+async function extract(url: string): Promise<FullText | null> {
+  const saved = await readDisk(url);
+  if (saved) {
+    cache.set(url, { at: Date.now(), value: saved });
+    return saved;
+  }
   let result: FullText | null = null;
   try {
     // Retry once: the first connection to a site sometimes times out.
@@ -451,6 +493,7 @@ export async function getFullText(url: string): Promise<FullText | null> {
       const award = awardPage(document, url);
       if (award) {
         cache.set(url, { at: Date.now(), value: award });
+        saveDisk(url, award);
         return award;
       }
       removeBoilerplate(document);
@@ -530,5 +573,6 @@ export async function getFullText(url: string): Promise<FullText | null> {
   }
   cache.set(url, { at: Date.now(), value: result });
   if (cache.size > 500) cache.delete(cache.keys().next().value!);
+  if (result) saveDisk(url, result);
   return result;
 }

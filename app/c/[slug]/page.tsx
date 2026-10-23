@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllArticles, hasUntranslated, localize } from "@/lib/feeds";
 import { RefreshSoon } from "@/components/client";
+import { warm } from "@/lib/warm";
 import { getCategory, MOODBOARD, SOURCES } from "@/lib/sources";
 import { getLang, UI } from "@/lib/lang";
 import { ArticleCard } from "@/components/ArticleCard";
@@ -29,6 +30,8 @@ export default async function CategoryPage({
     .filter((a) => (moodboard ? a.image : true))
     .slice(0, moodboard ? 120 : 60);
   const loc = await localize(items, lang);
+  // Prepare the stories on the first screens in the background, so they open at once.
+  warm(items.slice(0, 16), lang, true);
   // Distinct publishers: RGB has several section feeds in one category.
   const sourceCount = new Set(SOURCES.filter((s) => s.category === slug).map((s) => s.name)).size;
 

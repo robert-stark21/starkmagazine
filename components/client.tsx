@@ -294,6 +294,90 @@ export function ScoreTicker({ lang }: { lang: "vi" | "en" }) {
   );
 }
 
+/**
+ * Loads article pages before they are opened, so they appear at once:
+ * - cards that come into view (a few per page, when the browser is idle),
+ * - a card under the mouse for 60ms (desktop), or the moment it is touched (phones).
+ * A full prefetch also has the server prepare the article (text and translation).
+ * On Save-Data or 2G connections only the hover/touch prefetch runs.
+ */
+export function CardPrefetch() {
+  const router = useRouter();
+  const pathname = usePathname();
+  useEffect(() => {
+    const conn = (navigator as any).connection;
+    const frugal = !!conn?.saveData || /(^|-)2g$/.test(conn?.effectiveType ?? "");
+    const MAX_VIEWPORT = 10; // per page, so a long list doesn't fetch everything
+    const done = new Set<string>();
+    let viewportCount = 0;
+    const prefetch = (link: HTMLAnchorElement) => {
+      const href = link.getAttribute("href");
+      if (!href || done.has(href) || href === location.pathname) return;
+      done.add(href);
+      router.prefetch(href, { kind: "full" } as any);
+      // Warm the picture too (low priority; the browser reuses it for the hero).
+      const src = link.querySelector("img")?.getAttribute("src");
+      if (src) Object.assign(new Image(), { fetchPriority: "low", src });
+    };
+    const cards = () => Array.from(document.querySelectorAll<HTMLAnchorElement>('a[href^="/a/"]'));
+
+    // Cards in view, one at a time when the browser is idle.
+    const idle = (cb: () => void) => ((window as any).requestIdleCallback ? (window as any).requestIdleCallback(cb, { timeout: 2000 }) : setTimeout(cb, 300));
+    const pending: HTMLAnchorElement[] = [];
+    let draining = false;
+    const drain = () => {
+      if (draining) return;
+      draining = true;
+      const next = () => {
+        const link = pending.shift();
+        if (!link || viewportCount >= MAX_VIEWPORT) { draining = false; return; }
+        if (!done.has(link.getAttribute("href") ?? "")) { viewportCount++; prefetch(link); }
+        idle(next);
+      };
+      idle(next);
+    };
+    const io = frugal
+      ? null
+      : new IntersectionObserver(
+          (entries) => {
+            for (const e of entries) {
+              if (!e.isIntersecting) continue;
+              io!.unobserve(e.target);
+              pending.push(e.target as HTMLAnchorElement);
+            }
+            drain();
+          },
+          { threshold: 0.6 }
+        );
+    // Wait a moment so the page's own requests go first.
+    const start = setTimeout(() => cards().forEach((c) => io?.observe(c)), 800);
+
+    // Intent: hover (mouse) or touch.
+    let hover: ReturnType<typeof setTimeout> | undefined;
+    const linkOf = (e: Event) => (e.target as Element | null)?.closest?.<HTMLAnchorElement>('a[href^="/a/"]');
+    const onOver = (e: PointerEvent) => {
+      const link = linkOf(e);
+      if (!link) return;
+      clearTimeout(hover);
+      if (e.pointerType === "mouse") hover = setTimeout(() => prefetch(link), 60);
+      else prefetch(link);
+    };
+    const onDown = (e: Event) => { const link = linkOf(e); if (link) prefetch(link); };
+    document.addEventListener("pointerover", onOver, { passive: true });
+    document.addEventListener("pointerdown", onDown, { passive: true });
+    document.addEventListener("touchstart", onDown, { passive: true });
+    return () => {
+      clearTimeout(start);
+      clearTimeout(hover);
+      io?.disconnect();
+      document.removeEventListener("pointerover", onOver);
+      document.removeEventListener("pointerdown", onDown);
+      document.removeEventListener("touchstart", onDown);
+    };
+  }, [router, pathname]);
+  return null;
+}
+
 /** Re-renders the page every 10 minutes so new stories appear without a reload. */
 export function AutoRefresh({ seconds }: { seconds: number }) {
   const router = useRouter();

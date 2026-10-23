@@ -3,6 +3,7 @@ import { imageSrcSet, imgSrc, SIZES } from "@/lib/img";
 import { ShinyText } from "@/components/BlurText";
 import { getAllArticles, hasUntranslated, localize } from "@/lib/feeds";
 import { RefreshSoon } from "@/components/client";
+import { warm } from "@/lib/warm";
 import { CATEGORIES } from "@/lib/sources";
 import { getLang, UI } from "@/lib/lang";
 import { ArticleCard } from "@/components/ArticleCard";
@@ -24,6 +25,8 @@ export default async function Home() {
 
   const shown = [hero, ...side, ...sections.flatMap((s) => s.items)].filter(Boolean);
   const loc = new Map((await localize(shown, lang)).map((a) => [a.id, a]));
+  // Prepare the stories on screen in the background, so they open at once.
+  warm(shown.slice(0, 16), lang, true);
   const L = (a: (typeof all)[number]) => loc.get(a.id) ?? a;
   const pending = hasUntranslated([...loc.values()], lang);
 
