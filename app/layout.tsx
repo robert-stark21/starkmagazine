@@ -1,5 +1,5 @@
 import "./globals.css";
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { getLang } from "@/lib/lang";
 import { AutoRefresh, CardTransitions, Spotlight } from "@/components/client";
 import { REFRESH_SECONDS } from "@/lib/feeds";
@@ -12,6 +12,16 @@ const manrope = Manrope({ subsets: ["latin", "latin-ext", "vietnamese"], display
 export const metadata: Metadata = {
   title: "STARK · Tin tức tổng hợp",
   description: "Công nghệ, crypto, tài chính, thể thao, design, UI/UX và nội thất, cập nhật mỗi 10 phút.",
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#16161a" },
+  ],
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {

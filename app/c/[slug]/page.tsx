@@ -53,7 +53,7 @@ export default async function CategoryPage({
           </div>
         </div>
         {loc.length ? (
-          <div className={moodboard ? "masonry" : "grid"}>
+          <div className={moodboard ? "masonry" : "grid cat-grid"}>
             {loc.map((a, i) => (
               <ArticleCard key={a.id} a={a} lang={lang} showCat={false} variant={moodboard ? "tile" : "default"} priority={i < 2} />
             ))}

@@ -292,3 +292,15 @@ export function HlsVideo({ src, poster }: { src: string; poster?: string }) {
   }, [src]);
   return <video ref={ref} poster={poster} controls preload="none" playsInline />;
 }
+
+/** Keeps the active category tab in view on narrow screens, where the menu scrolls sideways. */
+export function ActiveTab() {
+  useEffect(() => {
+    const row = document.querySelector<HTMLElement>(".cats .row");
+    const on = row?.querySelector<HTMLElement>("a.on");
+    if (!row || !on) return;
+    const left = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;
+    row.scrollTo({ left: Math.max(0, left), behavior: "instant" as ScrollBehavior });
+  });
+  return null;
+}

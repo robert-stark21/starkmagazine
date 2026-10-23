@@ -334,3 +334,83 @@ html { scroll-behavior: smooth; }
 .brand .logo { height: 30px; width: auto; display: block; color: #1c1c1c; }
 @media (prefers-color-scheme: dark) { .brand .logo { color: #fff; } }
 @media (max-width: 760px) { .brand .logo { height: 26px; } }
+
+/* ---------- Mobile ---------- */
+html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+a, button { -webkit-tap-highlight-color: transparent; }
+.wrap { padding-left: max(20px, env(safe-area-inset-left)); padding-right: max(20px, env(safe-area-inset-right)); }
+.foot-site { padding-bottom: max(28px, env(safe-area-inset-bottom)); }
+
+/* Touch screens: no hover lift or zoom, which otherwise sticks after a tap. */
+@media (hover: none) {
+  .card:hover, .card:not(.compact):hover .thumb img, .card.tile:hover .thumb img { transform: none; box-shadow: none; }
+  .card:not(.compact)::after { display: none; }
+  .card:active { transform: scale(.985); transition-duration: .1s; }
+}
+
+@media (max-width: 760px) {
+  .wrap { padding-left: max(16px, env(safe-area-inset-left)); padding-right: max(16px, env(safe-area-inset-right)); }
+  /* Shorter sticky header: more room for the news. */
+  .top { height: 56px; gap: 12px; }
+  .lang button { padding: 7px 14px; }
+  .cats a { padding: 11px 12px; }
+  .cats .row { gap: 0; scroll-padding-inline: 16px;
+    -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent);
+            mask-image: linear-gradient(90deg, #000 calc(100% - 28px), transparent); }
+  .sec { margin: 36px 0; }
+  .sec-h h2 { font-size: 20px; }
+  .sec-h a { padding: 8px 0 8px 12px; margin: -8px 0; }
+  .page-h { margin: 20px 0 16px; padding-bottom: 14px; gap: 10px; }
+  .page-h h1 { font-size: 28px; }
+  .chips { width: 100%; overflow-x: auto; scrollbar-width: none; }
+  .chip { padding: 8px 14px; white-space: nowrap; }
+  .card.hero .body { padding: 16px 18px 18px; }
+  .card.hero p { font-size: 15px; }
+  .masonry { columns: 2; column-gap: 10px; }
+  .masonry .card { margin-bottom: 10px; }
+  .card.tile .body { padding: 10px 10px 12px; }
+  .card.tile h3 { font-size: 13px; }
+  .card.tile .meta .badge { display: none; }
+  .foot-site { margin-top: 40px; }
+
+  /* Article page */
+  .detail { padding-top: 24px; }
+  .dek { margin-top: 14px; }
+  .d-byline { margin-top: 14px; font-size: 13px; }
+  .d-hero { margin-top: 22px; }
+  .d-grid { margin-top: 20px; gap: 20px; }
+  /* Source is already in the byline: keep only date and reading time, on one line. */
+  .d-side dl { display: flex; flex-wrap: wrap; gap: 8px 24px; padding-top: 12px; }
+  .d-side dl > div:first-child { display: none; }
+  .d-side dd { font-size: 13.5px; }
+  .d-note { margin-top: 12px; }
+  .summary { margin-bottom: 28px; }
+  .prose h2 { font-size: 22px; }
+  .prose-img, .prose-video, .gallery { margin: 1.6em 0; }
+  .related { margin-top: 48px; }
+}
+
+/* Phones: news lists become compact rows (thumbnail beside the headline) instead of
+   tall full-width cards, so a screen shows four or five stories instead of one. */
+@media (max-width: 520px) {
+  .grid { gap: 0; }
+  .grid > .card { border: 0; border-bottom: 1px solid var(--line); border-radius: 0; background: none; overflow: visible; }
+  .grid > .card .cover { display: grid; grid-template-columns: minmax(0, 1fr) 104px; gap: 14px; padding: 14px 0; align-items: start; }
+  .grid > .card .thumb { grid-column: 2; grid-row: 1; aspect-ratio: 1; border-radius: 10px; }
+  .grid > .card .thumb.ph { font-size: 12px; text-align: center; padding: 6px; }
+  .grid > .card .body { grid-column: 1; grid-row: 1; padding: 0; gap: 6px; }
+  .grid > .card h3 { font-size: 15.5px; line-height: 1.38; }
+  .grid > .card p { display: none; }
+  .grid > .card .meta .badge { display: none; }
+  .grid > .card:last-child { border-bottom: 0; }
+  /* Category page: the newest story keeps the big card on top. */
+  .cat-grid > .card:first-child { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; margin-bottom: 6px; }
+  .cat-grid > .card:first-child .cover { display: flex; padding: 0; gap: 0; align-items: stretch; }
+  .cat-grid > .card:first-child .thumb { aspect-ratio: 16 / 10; border-radius: 0; }
+  .cat-grid > .card:first-child .body { padding: 14px 16px 16px; gap: 8px; }
+  .cat-grid > .card:first-child h3 { font-size: 19px; line-height: 1.3; }
+  .cat-grid > .card:first-child p { display: -webkit-box; }
+  .card.hero h3 { font-size: 22px; }
+  .detail h1 { font-size: 28px; line-height: 1.12; }
+  .dek { font-size: 17px; }
+}

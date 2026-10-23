@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { CATEGORIES, type Lang } from "@/lib/sources";
 import { UI } from "@/lib/lang";
-import { LangToggle } from "./client";
+import { ActiveTab, LangToggle } from "./client";
 import { Logo } from "./Logo";
 
 export function Header({ lang, active, updated }: { lang: Lang; active?: string; updated: Date }) {
@@ -32,6 +32,7 @@ export function Header({ lang, active, updated }: { lang: Lang; active?: string;
           ))}
         </div>
       </nav>
+      <ActiveTab />
     </header>
   );
 }
