@@ -47,3 +47,46 @@ export function Thumb({ src, alt, color, label }: { src?: string; alt: string; c
     </div>
   );
 }
+
+/** An image from the original article; hides itself if it fails to load. */
+export function ProseImage({ src, caption }: { src: string; caption?: string }) {
+  const [broken, setBroken] = useState(false);
+  const ref = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const img = ref.current;
+    if (img && img.complete && img.naturalWidth === 0) setBroken(true);
+  }, [src]);
+  if (broken) return null;
+  return (
+    <figure className="prose-img">
+      <img ref={ref} src={src} alt={caption ?? ""} loading="lazy" referrerPolicy="no-referrer" onError={() => setBroken(true)} />
+      {caption && <figcaption>{caption}</figcaption>}
+    </figure>
+  );
+}
+
+/** Plays an HLS stream (.m3u8): natively in Safari, with hls.js elsewhere. */
+export function HlsVideo({ src, poster }: { src: string; poster?: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const video = ref.current;
+    if (!video) return;
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = src;
+      return;
+    }
+    let hls: import("hls.js").default | undefined;
+    let cancelled = false;
+    import("hls.js").then(({ default: Hls }) => {
+      if (cancelled || !Hls.isSupported()) return;
+      hls = new Hls();
+      hls.loadSource(src);
+      hls.attachMedia(video);
+    });
+    return () => {
+      cancelled = true;
+      hls?.destroy();
+    };
+  }, [src]);
+  return <video ref={ref} poster={poster} controls preload="none" playsInline />;
+}

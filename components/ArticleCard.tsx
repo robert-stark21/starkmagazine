@@ -29,7 +29,7 @@ export function ArticleCard({
 }: {
   a: Article;
   lang: Lang;
-  variant?: "hero" | "default" | "compact";
+  variant?: "hero" | "default" | "compact" | "tile";
   showCat?: boolean;
 }) {
   const cat = getCategory(a.category)!;
@@ -40,7 +40,7 @@ export function ArticleCard({
         <div className="body">
           <Meta a={a} lang={lang} showCat={showCat} />
           <h3>{a.title}</h3>
-          {variant !== "compact" && a.excerpt && <p>{a.excerpt}</p>}
+          {variant !== "compact" && variant !== "tile" && a.excerpt && <p>{a.excerpt}</p>}
           <div className="foot">
             {readingTime(a.text)} {UI[lang].minRead}
             {a.translated && <span className="tr">{lang === "vi" ? "Đã dịch" : "Translated"}</span>}

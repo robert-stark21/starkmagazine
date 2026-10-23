@@ -23,6 +23,8 @@ export const CATEGORIES: Category[] = [
   { slug: "design", vi: "Design", en: "Design", color: "#9333ea" },
   { slug: "ui-ux", vi: "UI/UX", en: "UI/UX", color: "#db2777" },
   { slug: "noi-that", vi: "Nội thất", en: "Interiors", color: "#a16207" },
+  { slug: "phim-anh", vi: "Phim ảnh", en: "Film", color: "#0891b2" },
+  { slug: "inspiration", vi: "Inspiration", en: "Inspiration", color: "#ea580c" },
 ];
 
 // Add or remove sources here. Feeds that fail are skipped silently.
@@ -51,14 +53,19 @@ export const SOURCES: Source[] = [
   // Thể thao
   { name: "VnExpress Thể thao", url: "https://vnexpress.net/rss/the-thao.rss", category: "the-thao", lang: "vi", region: "vn" },
   { name: "Thanh Niên Thể thao", url: "https://thanhnien.vn/rss/the-thao.rss", category: "the-thao", lang: "vi", region: "vn" },
-  { name: "BBC Sport", url: "https://feeds.bbci.co.uk/sport/rss.xml", category: "the-thao", lang: "en", region: "intl" },
-  { name: "ESPN", url: "https://www.espn.com/espn/rss/news", category: "the-thao", lang: "en", region: "intl" },
+  // Foreign football outlets, chosen because their pages give the full article text.
+  { name: "The Guardian Football", url: "https://www.theguardian.com/football/rss", category: "the-thao", lang: "en", region: "intl" },
+  { name: "Sky Sports Football", url: "https://www.skysports.com/rss/11095", category: "the-thao", lang: "en", region: "intl" },
+  { name: "FourFourTwo", url: "https://www.fourfourtwo.com/feeds/all", category: "the-thao", lang: "en", region: "intl" },
+  { name: "The Independent Football", url: "https://www.independent.co.uk/sport/football/rss", category: "the-thao", lang: "en", region: "intl" },
+  { name: "Daily Mail Football", url: "https://www.dailymail.co.uk/sport/football/index.rss", category: "the-thao", lang: "en", region: "intl" },
+  { name: "Football Italia", url: "https://football-italia.net/feed/", category: "the-thao", lang: "en", region: "intl" },
 
   // Design
   { name: "Dezeen", url: "https://www.dezeen.com/feed/", category: "design", lang: "en", region: "intl" },
   { name: "designboom", url: "https://www.designboom.com/feed/", category: "design", lang: "en", region: "intl" },
   { name: "Creative Bloq", url: "https://www.creativebloq.com/feeds/all", category: "design", lang: "en", region: "intl" },
-  { name: "Brands Vietnam", url: "https://www.brandsvietnam.com/rss/tieu-diem", category: "design", lang: "vi", region: "vn" },
+  { name: "Tạp chí Kiến trúc", url: "https://www.tapchikientruc.com.vn/feed", category: "design", lang: "vi", region: "vn" },
 
   // UI/UX
   { name: "Smashing Magazine", url: "https://www.smashingmagazine.com/feed/", category: "ui-ux", lang: "en", region: "intl" },
@@ -67,11 +74,34 @@ export const SOURCES: Source[] = [
   { name: "UX Planet", url: "https://uxplanet.org/feed", category: "ui-ux", lang: "en", region: "intl" },
 
   // Nội thất
-  { name: "Kiến Việt", url: "https://kienviet.net/feed/", category: "noi-that", lang: "vi", region: "vn" },
+  { name: "Kiến trúc Việt Nam", url: "https://kientrucvietnam.org.vn/feed/", category: "noi-that", lang: "vi", region: "vn" },
   { name: "Dezeen Interiors", url: "https://www.dezeen.com/interiors/feed/", category: "noi-that", lang: "en", region: "intl" },
   { name: "ArchDaily", url: "https://feeds.feedburner.com/Archdaily", category: "noi-that", lang: "en", region: "intl" },
   { name: "Architectural Digest", url: "https://www.architecturaldigest.com/feed/rss", category: "noi-that", lang: "en", region: "intl" },
+
+  // Phim ảnh
+  { name: "Tuổi Trẻ Điện ảnh", url: "https://tuoitre.vn/rss/dien-anh.rss", category: "phim-anh", lang: "vi", region: "vn" },
+  { name: "Thanh Niên Phim", url: "https://thanhnien.vn/rss/giai-tri/phim.rss", category: "phim-anh", lang: "vi", region: "vn" },
+  { name: "Variety Film", url: "https://variety.com/v/film/feed/", category: "phim-anh", lang: "en", region: "intl" },
+  { name: "The Guardian Film", url: "https://www.theguardian.com/film/rss", category: "phim-anh", lang: "en", region: "intl" },
+  { name: "/Film", url: "https://www.slashfilm.com/feed/", category: "phim-anh", lang: "en", region: "intl" },
+  { name: "Little White Lies", url: "https://lwlies.com/feed/", category: "phim-anh", lang: "en", region: "intl" },
+
+  // Inspiration: beautiful work and cool tech for moodboards
+  { name: "Đẹp Online", url: "https://dep.com.vn/feed/", category: "inspiration", lang: "vi", region: "vn" },
+  { name: "Colossal", url: "https://www.thisiscolossal.com/feed/", category: "inspiration", lang: "en", region: "intl" },
+  { name: "Booooooom", url: "https://www.booooooom.com/feed/", category: "inspiration", lang: "en", region: "intl" },
+  { name: "Abduzeedo", url: "https://abduzeedo.com/rss.xml", category: "inspiration", lang: "en", region: "intl" },
+  { name: "Behance", url: "https://www.behance.net/feeds/projects", category: "inspiration", lang: "en", region: "intl" },
+  { name: "Creative Boom", url: "https://www.creativeboom.com/feed/", category: "inspiration", lang: "en", region: "intl" },
+  { name: "Yanko Design", url: "https://www.yankodesign.com/feed/", category: "inspiration", lang: "en", region: "intl" },
+  { name: "designboom Tech", url: "https://www.designboom.com/technology/feed/", category: "inspiration", lang: "en", region: "intl" },
+  { name: "Design Milk", url: "https://design-milk.com/feed/", category: "inspiration", lang: "en", region: "intl" },
+  { name: "Minimalissimo", url: "https://minimalissimo.com/feed", category: "inspiration", lang: "en", region: "intl" },
 ];
+
+/** Categories shown as an image-first moodboard instead of a news grid. */
+export const MOODBOARD = new Set(["inspiration"]);
 
 export function getCategory(slug: string) {
   return CATEGORIES.find((c) => c.slug === slug);

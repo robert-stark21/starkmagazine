@@ -1,16 +1,16 @@
+import { decodeHTML } from "entities";
+
 export function stripHtml(html: string): string {
-  return (html || "")
+  const noTags = (html || "")
     .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|h\d|li)>/gi, "\n")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&#039;|&apos;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/<[^>]+>/g, " ");
+  // Decode every HTML entity (&ecirc;, &#7871;, &#x1EBF;, double-encoded &amp;ecirc; ...).
+  let text = decodeHTML(noTags);
+  if (/&[a-z]+;|&#x?[0-9a-f]+;/i.test(text)) text = decodeHTML(text);
+  return text
+    .replace(/ /g, " ")
     .replace(/[ \t]+/g, " ")
     .replace(/\n\s*\n+/g, "\n")
     .trim();

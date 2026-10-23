@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getAllArticles, lastUpdated, localize } from "@/lib/feeds";
-import { getCategory, SOURCES } from "@/lib/sources";
+import { getCategory, MOODBOARD, SOURCES } from "@/lib/sources";
 import { getLang, UI } from "@/lib/lang";
 import { Header } from "@/components/Header";
 import { ArticleCard } from "@/components/ArticleCard";
@@ -21,11 +21,13 @@ export default async function CategoryPage({
   if (!cat) notFound();
   const lang = await getLang();
   const t = UI[lang];
+  const moodboard = MOODBOARD.has(slug);
 
   const items = (await getAllArticles())
     .filter((a) => a.category === slug)
     .filter((a) => (r === "vn" || r === "intl" ? a.region === r : true))
-    .slice(0, 60);
+    .filter((a) => (moodboard ? a.image : true))
+    .slice(0, moodboard ? 120 : 60);
   const loc = await localize(items, lang);
   const sourceCount = SOURCES.filter((s) => s.category === slug).length;
 
@@ -49,9 +51,9 @@ export default async function CategoryPage({
           </div>
         </div>
         {loc.length ? (
-          <div className="grid">
+          <div className={moodboard ? "masonry" : "grid"}>
             {loc.map((a) => (
-              <ArticleCard key={a.id} a={a} lang={lang} showCat={false} />
+              <ArticleCard key={a.id} a={a} lang={lang} showCat={false} variant={moodboard ? "tile" : "default"} />
             ))}
           </div>
         ) : (
