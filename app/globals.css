@@ -149,10 +149,11 @@ header.site { background: var(--surface); border-bottom: 1px solid var(--line); 
    Large headline and hero on top; below, a narrow meta column beside a reading column
    of about 68 characters. Images run wider than the text; image runs become galleries. */
 .detail { --measure: 720px; max-width: 1120px; margin: 0 auto; padding: 56px 0 24px; }
-.d-head { max-width: 900px; }
+/* Headline and standfirst span the full width of the hero image. */
+.d-head { max-width: none; }
 .crumb { display: inline-block; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .12em; color: var(--c); }
-.detail h1 { font-size: clamp(34px, 5.2vw, 62px); line-height: 1.06; letter-spacing: -0.035em; font-weight: 800; margin: 14px 0 0; text-wrap: balance; }
-.dek { margin: 20px 0 0; font-size: clamp(18px, 1.7vw, 21px); line-height: 1.5; color: var(--muted); max-width: 60ch; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.detail h1 { font-size: clamp(30px, 5.2vw, 62px); line-height: 1.06; letter-spacing: -0.035em; font-weight: 800; margin: 14px 0 0; text-wrap: balance; }
+.dek { text-wrap: pretty; margin: 20px 0 0; font-size: clamp(18px, 1.7vw, 21px); line-height: 1.5; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .d-byline { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 22px; font-size: 14px; color: var(--muted); }
 .d-byline .src { color: var(--text); font-weight: 700; }
 
