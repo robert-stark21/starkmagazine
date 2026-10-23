@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { imgSrc } from "@/lib/img";
 import type { Quote } from "@/lib/prices";
+import type { Match } from "@/lib/scores";
 
 export function LangToggle({ lang }: { lang: "vi" | "en" }) {
   const router = useRouter();
@@ -100,13 +101,46 @@ const TICKER_NAMES: Record<string, { vi: string; en: string }> = {
 };
 
 /**
+ * Fades and blurs a ticker row out over the first 70px of scroll. CSS does it with a
+ * scroll-driven animation where supported; this rAF fallback covers the other browsers.
+ */
+function useTickerFade(row: React.RefObject<HTMLDivElement | null>, active: boolean) {
+  useEffect(() => {
+    const el = row.current;
+    if (!active || !el || CSS.supports("animation-timeline: scroll()")) return;
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const k = Math.min(1, scrollY / 70);
+      el.style.opacity = String(still ? (k < 1 ? 1 : 0) : 1 - k);
+      el.style.filter = still ? "" : `blur(${(k * 6).toFixed(1)}px)`;
+      el.style.transform = still ? "" : `translateY(${(-k * 8).toFixed(1)}px)`;
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
+    update();
+    addEventListener("scroll", onScroll, { passive: true });
+    return () => { removeEventListener("scroll", onScroll); cancelAnimationFrame(frame); };
+  }, [row, active]);
+}
+
+/** Constant scroll speed whatever the number of items: about 40px per second. */
+function useTickerSpeed(track: React.RefObject<HTMLDivElement | null>, deps: unknown[]) {
+  useEffect(() => {
+    const el = track.current;
+    if (el) el.style.setProperty("--ticker-time", `${Math.max(20, el.scrollWidth / 2 / 40)}s`);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, deps);
+}
+
+/** Pages with the price ticker: home, Finance and Crypto. Elsewhere it would distract. */
+const TICKER_PAGES = new Set(["/", "/c/tai-chinh", "/c/crypto"]);
+
+/**
  * Price ticker under the menu: BTC, ETH, gold, altcoins. Starts from the prices the server
  * rendered, refreshes every minute without restarting the scroll, and hides itself when
  * there is nothing to show. The list is doubled so the loop is seamless.
  */
-/** Pages with the price ticker: home, Finance and Crypto. Elsewhere it would distract. */
-const TICKER_PAGES = new Set(["/", "/c/tai-chinh", "/c/crypto"]);
-
 export function PriceTicker({ initial, lang }: { initial: Quote[]; lang: "vi" | "en" }) {
   const show = TICKER_PAGES.has(usePathname());
   const [quotes, setQuotes] = useState(initial);
@@ -125,30 +159,8 @@ export function PriceTicker({ initial, lang }: { initial: Quote[]; lang: "vi" | 
     const t = setInterval(load, 60_000);
     return () => { stop = true; clearInterval(t); };
   }, [show, fresh]);
-  // Constant speed whatever the number of items: about 40px per second.
-  useEffect(() => {
-    const el = track.current;
-    if (el) el.style.setProperty("--ticker-time", `${Math.max(20, el.scrollWidth / 2 / 40)}s`);
-  }, [quotes.length, show]);
-  // Fade and blur out over the first 70px of scroll. CSS does it with a scroll-driven
-  // animation where supported; this rAF fallback covers the other browsers.
-  useEffect(() => {
-    const el = row.current;
-    if (!show || !el || CSS.supports("animation-timeline: scroll()")) return;
-    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
-    let frame = 0;
-    const update = () => {
-      frame = 0;
-      const k = Math.min(1, scrollY / 70);
-      el.style.opacity = String(still ? (k < 1 ? 1 : 0) : 1 - k);
-      el.style.filter = still ? "" : `blur(${(k * 6).toFixed(1)}px)`;
-      el.style.transform = still ? "" : `translateY(${(-k * 8).toFixed(1)}px)`;
-    };
-    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
-    update();
-    addEventListener("scroll", onScroll, { passive: true });
-    return () => { removeEventListener("scroll", onScroll); cancelAnimationFrame(frame); };
-  }, [show]);
+  useTickerSpeed(track, [quotes.length, show]);
+  useTickerFade(row, show);
   if (!show || !quotes.length) return null;
 
   const loc = lang === "vi" ? "vi-VN" : "en-US";
@@ -173,9 +185,110 @@ export function PriceTicker({ initial, lang }: { initial: Quote[]; lang: "vi" | 
   };
   return (
     <div className="ticker" ref={row} role="region" aria-label={lang === "vi" ? "Giá thị trường" : "Market prices"}>
-      <div className="ticker-track" ref={track} aria-hidden="true">
-        <div className="ticker-group">{quotes.map((q) => item(q, `a${q.sym}`))}</div>
-        <div className="ticker-group">{quotes.map((q) => item(q, `b${q.sym}`))}</div>
+      <div className="ticker-scroll">
+        <div className="ticker-track" ref={track} aria-hidden="true">
+          <div className="ticker-group">{quotes.map((q) => item(q, `a${q.sym}`))}</div>
+          <div className="ticker-group">{quotes.map((q) => item(q, `b${q.sym}`))}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/** League logos (40px files in public/leagues; "-dark" versions for dark backgrounds). */
+const LEAGUES: Record<Match["league"], { name: string; file: string; dark?: boolean }> = {
+  C1: { name: "UEFA Champions League", file: "c1", dark: true },
+  C2: { name: "UEFA Europa League", file: "c2", dark: true },
+  EPL: { name: "Premier League", file: "epl", dark: true },
+  LALIGA: { name: "La Liga", file: "laliga" },
+  SERIEA: { name: "Serie A", file: "seriea" },
+  VLEAGUE: { name: "V.League 1", file: "vleague" },
+};
+
+/** Small league logo, fixed size so nothing shifts while it loads. */
+function LeagueLogo({ league }: { league: Match["league"] }) {
+  const l = LEAGUES[league];
+  return (
+    <span className="m-lg" title={l.name}>
+      <img className={l.dark ? "lg-light" : undefined} src={`/leagues/${l.file}.png`} width={18} height={18} alt={l.name} decoding="async" />
+      {l.dark && <img className="lg-dark" src={`/leagues/${l.file}-dark.png`} width={18} height={18} alt="" aria-hidden="true" decoding="async" />}
+    </span>
+  );
+}
+
+/**
+ * Results ticker on the Sports page: UCL, UEL, Premier League, La Liga, Serie A and
+ * V-League, from yesterday to tomorrow. Live first, then results, then upcoming. A live
+ * Real Madrid or AC Milan match is pinned on the left, outside the scrolling part.
+ */
+export function ScoreTicker({ lang }: { lang: "vi" | "en" }) {
+  const show = usePathname() === "/c/the-thao";
+  const [matches, setMatches] = useState<Match[] | null>(null); // null while loading
+  const track = useRef<HTMLDivElement>(null);
+  const row = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!show) return;
+    let stop = false;
+    const load = () =>
+      fetch("/api/scores")
+        .then((r) => (r.ok ? r.json() : Promise.reject()))
+        .then((d) => { if (!stop) setMatches(Array.isArray(d?.matches) ? d.matches : []); })
+        .catch(() => { if (!stop) setMatches((m) => m ?? []); });
+    load();
+    const t = setInterval(load, 30_000);
+    return () => { stop = true; clearInterval(t); };
+  }, [show]);
+  const list = (matches ?? []).filter((m) => !m.pinned);
+  useTickerSpeed(track, [list.length, show]);
+  useTickerFade(row, show);
+  // While loading the row keeps its height so the page does not jump; with no data it hides.
+  if (!show || (matches && !matches.length)) return null;
+
+  const vi = lang === "vi";
+  const pinned = (matches ?? []).find((m) => m.pinned);
+  const time = (iso: string) => {
+    const d = new Date(iso);
+    const hm = new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Ho_Chi_Minh" }).format(d);
+    const day = (t: Date) => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Ho_Chi_Minh" }).format(t);
+    const tomorrow = day(d) === day(new Date(Date.now() + 86_400_000));
+    return tomorrow ? `${vi ? "Mai" : "Tmrw"} ${hm}` : hm;
+  };
+  const status = (m: Match) =>
+    m.state === "live" ? (
+      <span className="m-st live"><i className="m-dot" />{m.minute}</span>
+    ) : m.state === "post" ? (
+      <span className="m-st">FT</span>
+    ) : (
+      <span className="m-st">{time(m.kickoff)}</span>
+    );
+  const item = (m: Match, k: string) => (
+    <span className={`tick match${m.state === "live" ? " is-live" : ""}`} key={k}>
+      <LeagueLogo league={m.league} />
+      <span className="m-tm">{m.home}</span>
+      <b className="m-sc">{m.state === "pre" ? "–" : `${m.hs}–${m.as}`}</b>
+      <span className="m-tm">{m.away}</span>
+      {status(m)}
+    </span>
+  );
+  return (
+    <div className="ticker scores" ref={row} role="region" aria-label={vi ? "Kết quả bóng đá" : "Football scores"}>
+      {pinned && (
+        <div className="pin" title={`${pinned.home} ${pinned.hs}–${pinned.as} ${pinned.away}`}>
+          <span className="live-badge">LIVE</span>
+          <LeagueLogo league={pinned.league} />
+          <span className="pin-tm">{pinned.homeAbbr || pinned.home}</span>
+          <b className="m-sc">{pinned.hs}–{pinned.as}</b>
+          <span className="pin-tm">{pinned.awayAbbr || pinned.away}</span>
+          <span className="m-st live">{pinned.minute}</span>
+        </div>
+      )}
+      <div className="ticker-scroll">
+        {list.length > 0 && (
+          <div className="ticker-track" ref={track} aria-hidden="true">
+            <div className="ticker-group">{list.map((m) => item(m, `a${m.id}`))}</div>
+            <div className="ticker-group">{list.map((m) => item(m, `b${m.id}`))}</div>
+          </div>
+        )}
       </div>
     </div>
   );
