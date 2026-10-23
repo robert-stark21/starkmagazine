@@ -45,6 +45,18 @@ function findImage(item: Item): string | undefined {
   return url?.startsWith("//") ? `https:${url}` : url;
 }
 
+/** Decodes the feed using its declared charset (header or XML prolog), defaulting to UTF-8. */
+function decodeBody(bytes: Uint8Array, contentType: string | null): string {
+  const head = new TextDecoder("latin1").decode(bytes.slice(0, 300));
+  const charset =
+    contentType?.match(/charset=["']?([\w-]+)/i)?.[1] ?? head.match(/encoding=["']([\w-]+)["']/i)?.[1] ?? "utf-8";
+  try {
+    return new TextDecoder(charset.toLowerCase()).decode(bytes);
+  } catch {
+    return new TextDecoder("utf-8").decode(bytes);
+  }
+}
+
 async function fetchSource(src: Source): Promise<Article[]> {
   const res = await fetch(src.url, {
     headers: { "User-Agent": "Mozilla/5.0 (compatible; TinTongHop/1.0; +rss reader)" },
@@ -54,7 +66,7 @@ async function fetchSource(src: Source): Promise<Article[]> {
   });
   if (!res.ok) throw new Error(`${src.name}: ${res.status}`);
   // Some feeds contain a bare "&" which breaks the XML parser.
-  const xml = (await res.text()).replace(/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;");
+  const xml = decodeBody(new Uint8Array(await res.arrayBuffer()), res.headers.get("content-type")).replace(/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;");
   const feed = await parser.parseString(xml);
   return (feed.items ?? []).slice(0, 20).flatMap((item) => {
     const link = item.link?.trim();

@@ -1,16 +1,15 @@
+import { decodeHTML } from "entities";
+
 export function stripHtml(html: string): string {
-  return (html || "")
+  const text = (html || "")
     .replace(/<(script|style)[\s\S]*?<\/\1>/gi, " ")
     .replace(/<br\s*\/?>/gi, "\n")
     .replace(/<\/(p|div|h\d|li)>/gi, "\n")
-    .replace(/<[^>]+>/g, " ")
-    .replace(/&nbsp;/g, " ")
-    .replace(/&amp;/g, "&")
-    .replace(/&quot;/g, '"')
-    .replace(/&#39;|&#039;|&apos;/g, "'")
-    .replace(/&lt;/g, "<")
-    .replace(/&gt;/g, ">")
-    .replace(/&#(\d+);/g, (_, n) => String.fromCharCode(Number(n)))
+    .replace(/<[^>]+>/g, " ");
+  // Decode all HTML entities (&agrave;, &#7897;, &#x1EA1;...), twice for double-escaped feeds.
+  return decodeHTML(decodeHTML(text))
+    .normalize("NFC")
+    .replace(/\u00a0/g, " ")
     .replace(/[ \t]+/g, " ")
     .replace(/\n\s*\n+/g, "\n")
     .trim();
