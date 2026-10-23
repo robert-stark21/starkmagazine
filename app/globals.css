@@ -166,7 +166,7 @@ header.site { background: var(--surface); border-bottom: 1px solid var(--line); 
 .d-hero.sk { aspect-ratio: 16 / 9; border-radius: 18px; }
 
 .d-grid { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 56px; margin-top: 48px; align-items: start; }
-.d-side { position: sticky; top: 132px; font-size: 14px; }
+.d-side { position: sticky; top: 176px; font-size: 14px; }
 .d-side dl { margin: 0; display: grid; gap: 18px; padding-top: 16px; border-top: 2px solid var(--c, var(--accent)); }
 .d-side dt { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin-bottom: 4px; }
 .d-side dd { margin: 0; font-weight: 600; line-height: 1.45; }
@@ -489,3 +489,28 @@ a, button { touch-action: manipulation; }
 .kindle .prose { font-size: 19px; line-height: 1.68; }
 .kindle .prose > p.lead::first-letter { color: var(--text); }
 .kindle ::selection { background: #1b1a18; color: #e8e6e1; }
+
+/* ---------- Price ticker (under the menu, same height as a menu row) ---------- */
+.ticker { border-top: 1px solid var(--line); overflow: hidden; height: 49px; display: flex; align-items: center; font-size: 13px;
+  -webkit-mask-image: linear-gradient(90deg, transparent, #000 32px, #000 calc(100% - 32px), transparent);
+          mask-image: linear-gradient(90deg, transparent, #000 32px, #000 calc(100% - 32px), transparent); }
+.ticker-track { display: flex; width: max-content; animation: ticker var(--ticker-time, 40s) linear infinite; }
+.ticker:hover .ticker-track, .ticker:active .ticker-track { animation-play-state: paused; }
+.ticker-group { display: flex; flex: none; }
+@keyframes ticker { to { transform: translateX(-50%); } }
+.tick { display: inline-flex; align-items: baseline; gap: 7px; padding: 0 22px; white-space: nowrap; border-right: 1px solid var(--line); font-variant-numeric: tabular-nums; }
+.tick b { font-weight: 800; letter-spacing: .02em; }
+.tick-price { color: var(--text); }
+.tick-chg { font-size: 12px; font-weight: 700; }
+.tick-chg.up { color: #16a34a; }
+.tick-chg.down { color: #dc2626; }
+@media (prefers-color-scheme: dark) { .tick-chg.up { color: #4ade80; } .tick-chg.down { color: #f87171; } }
+@media (max-width: 760px) { .ticker { height: 47px; font-size: 12.5px; } .tick { padding: 0 16px; } }
+/* Reduced motion: a still row you can scroll sideways. */
+@media (prefers-reduced-motion: reduce) {
+  .ticker { overflow-x: auto; scrollbar-width: none; -webkit-mask-image: none; mask-image: none; }
+  .ticker-track { animation: none; }
+  .ticker-group + .ticker-group { display: none; }
+}
+/* Kindle: ink only, arrows tell the direction. */
+.kindle .tick-chg.up, .kindle .tick-chg.down { color: var(--muted); }

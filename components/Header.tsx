@@ -1,11 +1,15 @@
 import Link from "next/link";
 import { CATEGORIES, type Lang } from "@/lib/sources";
 import { UI } from "@/lib/lang";
-import { CatNav, KindleToggle, LangToggle } from "./client";
+import { getQuotes } from "@/lib/prices";
+import { CatNav, KindleToggle, LangToggle, PriceTicker } from "./client";
 import { Logo } from "./Logo";
 
-export function Header({ lang, updated, kindle }: { lang: Lang; updated: Date; kindle: boolean }) {
+export async function Header({ lang, updated, kindle }: { lang: Lang; updated: Date; kindle: boolean }) {
   const t = UI[lang];
+  // Prices for the ticker, so it shows with the first paint. Cached in memory; right after
+  // a restart we wait at most 1.5s and the ticker fills in on the client otherwise.
+  const quotes = await getQuotes(1500);
   const today = new Intl.DateTimeFormat(lang === "vi" ? "vi-VN" : "en-US", {
     weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Ho_Chi_Minh",
   }).format(new Date());
@@ -29,6 +33,7 @@ export function Header({ lang, updated, kindle }: { lang: Lang; updated: Date; k
           ...CATEGORIES.map((c) => ({ href: `/c/${c.slug}`, slug: c.slug, label: c[lang], color: c.color })),
         ]}
       />
+      <PriceTicker initial={quotes} lang={lang} />
     </header>
   );
 }

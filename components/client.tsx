@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { imgSrc } from "@/lib/img";
+import type { Quote } from "@/lib/prices";
 
 export function LangToggle({ lang }: { lang: "vi" | "en" }) {
   const router = useRouter();
@@ -91,6 +92,67 @@ export function Grain() {
     };
   }, []);
   return <canvas ref={ref} className="grain" aria-hidden="true" />;
+}
+
+const TICKER_NAMES: Record<string, { vi: string; en: string }> = {
+  XAU: { vi: "Vàng", en: "Gold" },
+  XAG: { vi: "Bạc", en: "Silver" },
+};
+
+/**
+ * Price ticker under the menu: BTC, ETH, gold, altcoins. Starts from the prices the server
+ * rendered, refreshes every minute without restarting the scroll, and hides itself when
+ * there is nothing to show. The list is doubled so the loop is seamless.
+ */
+export function PriceTicker({ initial, lang }: { initial: Quote[]; lang: "vi" | "en" }) {
+  const [quotes, setQuotes] = useState(initial);
+  const track = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    let stop = false;
+    const load = () =>
+      fetch("/api/prices")
+        .then((r) => (r.ok ? r.json() : null))
+        .then((d) => { if (!stop && d?.quotes?.length) setQuotes(d.quotes); })
+        .catch(() => {});
+    if (!initial.length) load();
+    const t = setInterval(load, 60_000);
+    return () => { stop = true; clearInterval(t); };
+  }, [initial.length]);
+  // Constant speed whatever the number of items: about 40px per second.
+  useEffect(() => {
+    const el = track.current;
+    if (el) el.style.setProperty("--ticker-time", `${Math.max(20, el.scrollWidth / 2 / 40)}s`);
+  }, [quotes.length]);
+  if (!quotes.length) return null;
+
+  const loc = lang === "vi" ? "vi-VN" : "en-US";
+  const fmt = (q: Quote) => {
+    if (q.cur === "VND") return new Intl.NumberFormat(loc, { maximumFractionDigits: 0 }).format(q.price) + " ₫";
+    const digits = q.price >= 1000 ? 0 : q.price >= 1 ? 2 : 4;
+    return "$" + new Intl.NumberFormat(loc, { minimumFractionDigits: digits, maximumFractionDigits: digits }).format(q.price);
+  };
+  const item = (q: Quote, k: string) => {
+    const up = (q.change ?? 0) >= 0;
+    return (
+      <span className="tick" key={k}>
+        <b>{TICKER_NAMES[q.sym]?.[lang] ?? q.sym}</b>
+        <span className="tick-price">{fmt(q)}</span>
+        {q.change !== undefined && (
+          <span className={`tick-chg ${up ? "up" : "down"}`}>
+            {up ? "▲" : "▼"} {new Intl.NumberFormat(loc, { maximumFractionDigits: 2 }).format(Math.abs(q.change))}%
+          </span>
+        )}
+      </span>
+    );
+  };
+  return (
+    <div className="ticker" role="region" aria-label={lang === "vi" ? "Giá thị trường" : "Market prices"}>
+      <div className="ticker-track" ref={track} aria-hidden="true">
+        <div className="ticker-group">{quotes.map((q) => item(q, `a${q.sym}`))}</div>
+        <div className="ticker-group">{quotes.map((q) => item(q, `b${q.sym}`))}</div>
+      </div>
+    </div>
+  );
 }
 
 /** Re-renders the page every 10 minutes so new stories appear without a reload. */
