@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { imgSrc } from "@/lib/img";
 import type { Quote } from "@/lib/prices";
-import type { Match } from "@/lib/scores";
+import { isVisible, type Match } from "@/lib/scores";
 
 export function LangToggle({ lang }: { lang: "vi" | "en" }) {
   const router = useRouter();
@@ -232,7 +232,7 @@ export function ScoreTicker({ lang }: { lang: "vi" | "en" }) {
     const load = () =>
       fetch("/api/scores")
         .then((r) => (r.ok ? r.json() : Promise.reject()))
-        .then((d) => { if (!stop) setMatches(Array.isArray(d?.matches) ? d.matches : []); })
+        .then((d) => { if (!stop) setMatches(Array.isArray(d?.matches) ? d.matches.filter((m: Match) => isVisible(m)) : []); })
         .catch(() => { if (!stop) setMatches((m) => m ?? []); });
     load();
     const t = setInterval(load, 30_000);

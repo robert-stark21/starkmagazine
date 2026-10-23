@@ -109,19 +109,29 @@ async function vLeague(): Promise<Match[]> {
   return out;
 }
 
+/**
+ * Which matches the ticker shows, decided at the moment of asking: live matches; results
+ * that ended within the last 24 hours (end taken as kick-off + 2h); upcoming matches
+ * until the end of tomorrow, Vietnam time. Old results drop out on their own.
+ */
+export function isVisible(m: Match, now = Date.now()): boolean {
+  const kickoff = Date.parse(m.kickoff);
+  if (m.state === "live") return true;
+  if (m.state === "post") return now - (kickoff + 2 * 3_600_000) <= DAY;
+  const endOfTomorrow = Date.parse(`${new Date(now + VN + DAY).toISOString().slice(0, 10)}T23:59:59+07:00`);
+  return kickoff <= endOfTomorrow;
+}
+
 let memo: { at: number; matches: Match[]; live: boolean } | null = null;
 let inflight: Promise<Match[]> | null = null;
 
 async function load(): Promise<Match[]> {
   const parts = await Promise.all([...ESPN.map((l) => espnLeague(l.slug, l.league).catch(() => [])), vLeague().catch(() => [])]);
-  // Window: from the start of yesterday to the end of tomorrow, Vietnam time.
-  const start = Date.parse(`${vnDay(-1, true)}T00:00:00+07:00`);
-  const end = Date.parse(`${vnDay(1, true)}T23:59:59+07:00`);
   const seen = new Set<string>();
   const matches = parts
     .flat()
     .filter((m) => (seen.has(m.id) ? false : (seen.add(m.id), true)))
-    .filter((m) => m.state === "live" || (Date.parse(m.kickoff) >= start && Date.parse(m.kickoff) <= end));
+    .filter((m) => isVisible(m));
   const rank = { live: 0, post: 1, pre: 2 } as const;
   matches.sort((a, b) => {
     if (a.state !== b.state) return rank[a.state] - rank[b.state];
@@ -138,5 +148,7 @@ export async function getScores(): Promise<{ matches: Match[]; live: boolean }> 
   const fresh = memo && Date.now() - memo.at < ttl;
   if (!fresh && !inflight) inflight = load().finally(() => (inflight = null));
   if (!memo) await inflight;
-  return { matches: memo?.matches ?? [], live: memo?.live ?? false };
+  // Filter again on every answer, so cached data never shows results past the 24h cutoff.
+  const matches = (memo?.matches ?? []).filter((m) => isVisible(m));
+  return { matches, live: matches.some((m) => m.state === "live") };
 }
