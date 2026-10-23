@@ -10,7 +10,7 @@ import { Manrope } from "next/font/google";
 const manrope = Manrope({ subsets: ["latin", "latin-ext", "vietnamese"], display: "swap", variable: "--font-sans" });
 
 export const metadata: Metadata = {
-  title: "Magazine · Tin tức tổng hợp",
+  title: "STARK · Tin tức tổng hợp",
   description: "Công nghệ, crypto, tài chính, thể thao, design, UI/UX và nội thất, cập nhật mỗi 10 phút.",
 };
 
@@ -25,7 +25,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <CardTransitions />
         <footer className="foot-site">
           <div className="wrap">
-            © Magazine · {lang === "vi" ? "Nội dung thuộc về các nguồn báo gốc." : "All content belongs to the original publishers."}
+            © STARK · {lang === "vi" ? "Nội dung thuộc về các nguồn báo gốc." : "All content belongs to the original publishers."}
           </div>
         </footer>
       </body>

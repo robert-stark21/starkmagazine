@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CATEGORIES, type Lang } from "@/lib/sources";
 import { UI } from "@/lib/lang";
 import { LangToggle } from "./client";
+import { Logo } from "./Logo";
 
 export function Header({ lang, active, updated }: { lang: Lang; active?: string; updated: Date }) {
   const t = UI[lang];
@@ -12,8 +13,8 @@ export function Header({ lang, active, updated }: { lang: Lang; active?: string;
   return (
     <header className="site">
       <div className="wrap top">
-        <Link href="/" className="brand">
-          Magazine<span>.</span>
+        <Link href="/" className="brand" aria-label="STARK">
+          <Logo className="logo" />
         </Link>
         <div className="tag">{t.tagline}</div>
         <div className="right">

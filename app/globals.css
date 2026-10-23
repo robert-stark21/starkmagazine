@@ -328,3 +328,8 @@ html { scroll-behavior: smooth; }
 @media (max-width: 480px) {
   .prose > p, .summary li { text-align: left; }
 }
+
+/* Logo */
+.brand { display: flex; align-items: center; }
+.brand .logo { height: 28px; width: auto; display: block; color: var(--text); }
+@media (max-width: 760px) { .brand .logo { height: 24px; } }
