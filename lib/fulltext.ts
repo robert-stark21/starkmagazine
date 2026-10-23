@@ -236,6 +236,62 @@ function markVideos(document: any, pageUrl: string): Video[] {
   return vids;
 }
 
+/** Per-site boxes that are never part of the story (TV schedules, subscribe tiles, share bars). */
+const BOILERPLATE = [
+  "[class*='live-on-sky']",
+  "[class*='sdc-site-tile']",
+  "[class*='sdc-article-strapline']",
+  "[class*='newsletter']",
+  "[class*='share-bar']",
+  "[class*='social-share']",
+  "[class*='related-articles']",
+  "[class*='read-more']",
+  "[data-testid*='newsletter']",
+].join(",");
+
+function removeBoilerplate(document: any) {
+  for (const el of Array.from(document.querySelectorAll(BOILERPLATE)) as any[]) {
+    if (el.isConnected && !el.matches("article, main, body")) el.remove();
+  }
+}
+
+/** Phrases that are almost always promos, checked on paragraphs up to 220 characters. */
+const PROMO_STRONG = new RegExp(
+  [
+    "\\bgot sky\\?", "\\bnot got sky\\b", "\\btransfer centre\\b", "\\bfixtures (?:&|and) (?:results|scores)\\b",
+    "\\bfree .{0,30}highlights\\b", "\\bsky sports (?:deals|offers)\\b", "\\b(?:with ?out|no) (?:a )?contract\\b",
+    "^read (?:more|next)\\b", "^published: .{0,40}\\d{4}", "^related:", "\\bdownload (?:the|our) app\\b", "\\bclick here\\b", "\\bafter newsletter promotion\\b",
+    "^(?:xem thêm|đọc thêm|tin liên quan)\\s*:", "đăng ký nhận bản tin", "tải ứng dụng",
+  ].join("|"),
+  "i"
+);
+/** Phrases that also appear in real sentences, so only very short lines are dropped. */
+const PROMO_WEAK = /\blive on sky\b|\bwatch .{0,40}\blive\b|\bsign up\b|\bsubscribe\b|\bnewsletter\b|\bfollow us\b|\bkick.?off \d|theo dõi chúng tôi/i;
+
+const DAY = "(?:mon|tues|wednes|thurs|fri|satur|sun)day";
+/** Broadcast schedule lines like "Sunday 25th October 12:30pm, Kick off 2:00pm". */
+const SCHEDULE = new RegExp(`^${DAY}\\s+\\d{1,2}(?:st|nd|rd|th)?\\s+\\w+.{0,40}\\d{1,2}[:.]\\d{2}\\s*(?:am|pm)`, "i");
+/** Short calls to action that end in an emoji or arrow ("Watch goals FREE ▶️"). */
+const ENDS_WITH_ICON = /(?:\p{Extended_Pictographic}|[▶►→➡»›⚪🔵])[️\s]*$/u;
+
+/** True for promo lines, link lists and schedule boxes rather than article paragraphs. */
+function isJunk(el: any, text: string): boolean {
+  const len = text.length;
+  if (len > 400) return false;
+  // Mostly link text: navigation lists, "Transfer Centre LIVE! | Brighton news" and the like.
+  let linked = 0;
+  for (const a of Array.from(el.querySelectorAll("a")) as any[]) linked += (a.textContent ?? "").replace(/\s+/g, " ").trim().length;
+  if (linked > len * 0.5) return true;
+  // "Team news | FREE highlights" link pairs; plain "SCORE: 1-2 | BEST BET: ..." text stays.
+  if (len < 160 && / \| /.test(text) && linked > 0) return true;
+  if (len < 140 && ENDS_WITH_ICON.test(text)) return true;
+  if (SCHEDULE.test(text)) return true;
+  if (len < 220 && PROMO_STRONG.test(text)) return true;
+  // Fixture headings ("Chelsea vs Spurs, Saturday 5.30pm, live on Sky Sports") are content.
+  if (len < 110 && PROMO_WEAK.test(text) && (/^watch\b/i.test(text) || !/ vs?\.? /i.test(text))) return true;
+  return false;
+}
+
 const MARKER = /⟦(IMG|VID)(\d+)⟧/;
 const MARKER_G = /⟦(?:IMG|VID)\d+⟧/g;
 
@@ -259,6 +315,7 @@ export async function getFullText(url: string): Promise<FullText | null> {
     if (res.ok) {
       const { document } = parseHTML(await res.text());
       const image = document.querySelector('meta[property="og:image"]')?.getAttribute("content") ?? undefined;
+      removeBoilerplate(document);
       fixImages(document);
       const vids = markVideos(document, url);
       const srcs = markImages(document, url);
@@ -308,6 +365,10 @@ export async function getFullText(url: string): Promise<FullText | null> {
             continue;
           }
           if (el.closest("figcaption")) continue;
+          if (isJunk(el, raw.replace(MARKER_G, "").replace(/\s+/g, " ").trim())) {
+            walk(raw, () => {}, addMarker); // keep any photos inside, drop the text
+            continue;
+          }
           // Text and image markers in their original order.
           walk(raw, (t) => addText(t, tag === "H2" || tag === "H3"), addMarker);
         }
