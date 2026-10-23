@@ -100,7 +100,11 @@ const JUNK = /loader|spinner|doodles|lazy-?load|logo|icon|avatar|sprite|pixel|ba
 const SMALL_IN_URL = /(?:zoom|resize|thumb)\/(\d{2,3})_(\d{2,3})\/|\/(\d{2,3})x(\d{2,3})\/|[?&]w(?:idth)?=(\d{2,3})(?:&|$)/i;
 
 function keepImage(img: any, src: string): boolean {
-  if (/^data:|\.svg(\?|$)/i.test(src) || JUNK.test(src)) return false;
+  if (/^data:|\.svg(\?|$)/i.test(src)) return false;
+  // A picture the page declares as large is content, whatever its name: an article about
+  // icons has files like "accordion-icons.jpg". The name test is for small site artwork.
+  const declared = Math.max(parseInt(img.getAttribute("width") ?? "", 10) || 0, parseInt(img.getAttribute("height") ?? "", 10) || 0);
+  if (declared < 300 && JUNK.test(src)) return false;
   const m = src.match(SMALL_IN_URL);
   if (m) {
     const w = +(m[1] ?? m[3] ?? m[5]);
@@ -167,9 +171,13 @@ function markImages(document: any, pageUrl: string): Marked[] {
     try {
       linkUrl = link ? new URL(link, pageUrl) : undefined;
     } catch {}
+    // File names and alt text describe content ("accordion-icon-study.jpg", "Accordion icon
+    // study ..."), so only images not declared large are judged by them.
+    const small = Math.max(+(img.getAttribute("width") ?? 0) || 0, +(img.getAttribute("height") ?? 0) || 0) < 300;
     const social =
-      SOCIAL.test(new URL(src).pathname) ||
-      SOCIAL.test(`${img.getAttribute("class") ?? ""} ${img.getAttribute("alt") ?? ""}`) ||
+      (small && SOCIAL.test(new URL(src).pathname)) ||
+      SOCIAL.test(img.getAttribute("class") ?? "") ||
+      (small && SOCIAL.test(img.getAttribute("alt") ?? "")) ||
       // Share and follow toolbars (the image's own class is skipped: Daily Mail tags photos "img-share").
       !!img.parentElement?.closest("[class*='share'], [class*='social'], [class*='follow'], [class*='google-news']") ||
       // Banners that link to the publisher's home page or to Google News.
