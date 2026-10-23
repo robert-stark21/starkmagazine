@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import { imgSrc } from "@/lib/img";
 
 export function LangToggle({ lang }: { lang: "vi" | "en" }) {
   const router = useRouter();
@@ -62,7 +63,7 @@ export function Thumb({
     <div className="thumb" style={{ background: `linear-gradient(135deg, ${color}22, ${color}55)` }}>
       <img
         ref={ref}
-        src={src}
+        src={imgSrc(src)}
         srcSet={srcSet}
         sizes={srcSet ? sizes : undefined}
         alt={alt}
@@ -250,7 +251,7 @@ export function Spotlight() {
 }
 
 /** An image from the original article; hides itself if it fails to load. */
-export function ProseImage({ src, caption }: { src: string; caption?: string }) {
+export function ProseImage({ src, caption, drawing = false }: { src: string; caption?: string; drawing?: boolean }) {
   const [broken, setBroken] = useState(false);
   const ref = useRef<HTMLImageElement>(null);
   useEffect(() => {
@@ -259,8 +260,8 @@ export function ProseImage({ src, caption }: { src: string; caption?: string }) 
   }, [src]);
   if (broken) return null;
   return (
-    <figure className="prose-img">
-      <img ref={ref} src={src} alt={caption ?? ""} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setBroken(true)} />
+    <figure className={`prose-img${drawing ? " drawing" : ""}`}>
+      <img ref={ref} src={imgSrc(src)} alt={caption ?? ""} loading="lazy" decoding="async" referrerPolicy="no-referrer" onError={() => setBroken(true)} />
       {caption && <figcaption>{caption}</figcaption>}
     </figure>
   );

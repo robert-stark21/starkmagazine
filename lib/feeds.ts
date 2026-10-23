@@ -104,7 +104,7 @@ async function fetchSource(src: Source): Promise<Article[]> {
   // Some feeds contain a bare "&" which breaks the XML parser.
   const xml = decodeBody(new Uint8Array(await res.arrayBuffer()), res.headers.get("content-type")).replace(/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;");
   const feed = await parser.parseString(xml);
-  return (feed.items ?? []).slice(0, 20).flatMap((item) => {
+  const items: Article[] = (feed.items ?? []).slice(0, 20).flatMap((item) => {
     const link = item.link?.trim();
     const title = stripHtml(item.title ?? "");
     if (!link || !title || NOT_ARTICLE.test(link)) return [];
@@ -126,6 +126,51 @@ async function fetchSource(src: Source): Promise<Article[]> {
       },
     ];
   });
+  return src.pageImages ? addPageImages(items) : items;
+}
+
+const pageImageCache = new Map<string, string | null>();
+
+/** Reads an article page only up to </head> and returns its og:image. Remembered per link. */
+async function pageImage(link: string): Promise<string | undefined> {
+  if (pageImageCache.has(link)) return pageImageCache.get(link) ?? undefined;
+  let found: string | null = null;
+  try {
+    const res = await fetch(link, {
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(8000),
+    });
+    const reader = res.body?.getReader();
+    const dec = new TextDecoder();
+    let head = "";
+    while (reader && head.length < 400_000) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      head += dec.decode(value, { stream: true });
+      if (head.includes("</head>")) break;
+    }
+    void reader?.cancel().catch(() => {});
+    const tag = head.match(/<meta[^>]+property=["']og:image["'][^>]*>/i)?.[0];
+    found = tag?.match(/content=["']([^"']+)["']/i)?.[1] ?? null;
+  } catch {}
+  pageImageCache.set(link, found);
+  if (pageImageCache.size > 3000) pageImageCache.delete(pageImageCache.keys().next().value!);
+  return found ?? undefined;
+}
+
+/** Fills missing pictures from the article pages, four pages at a time. */
+async function addPageImages(articles: Article[]): Promise<Article[]> {
+  const out = articles.slice();
+  let next = 0;
+  const worker = async () => {
+    while (next < out.length) {
+      const i = next++;
+      if (!out[i].image) out[i] = { ...out[i], image: await pageImage(out[i].link) };
+    }
+  };
+  await Promise.all(Array.from({ length: 4 }, worker));
+  return out;
 }
 
 let memo: { at: number; articles: Article[] } | null = null;

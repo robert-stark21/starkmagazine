@@ -412,7 +412,13 @@ export async function getFullText(url: string): Promise<FullText | null> {
         };
         const addMarker = (kind: string, i: number) => (kind === "VID" ? addVideo(i) : addImage(i));
         const addText = (text: string, heading: boolean) => {
-          text = text.replace(/\s+/g, " ").trim();
+          // ArchDaily facts read "Area Area of this architecture project Area: 335 m²".
+          // Bongda.com.vn glues its name to the first sentence: "BongDa.com.vnAtletico Madrid ...".
+          text = text
+            .replace(/\s+/g, " ")
+            .trim()
+            .replace(/^.{0,40}? of this architecture project\s*/i, "")
+            .replace(/^BongDa\.com\.vn\s*[-–:]?\s*/i, "");
           if (text.length <= 25 || seenText.has(text)) return;
           seenText.add(text);
           blocks.push({ type: "text", text, heading });

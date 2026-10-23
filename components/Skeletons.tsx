@@ -1,4 +1,21 @@
 /** Grey placeholders shown instantly while a page or section loads. */
+
+/** The article's meta column and reading column, matching the real layout. */
+export function ArticleBodySkeleton() {
+  return (
+    <div className="d-grid" aria-busy="true" aria-label="Loading">
+      <aside className="d-side">
+        {[70, 85, 55].map((w, i) => (
+          <div key={i} className="sk sk-line" style={{ width: `${w}%` }} />
+        ))}
+      </aside>
+      <div className="d-main">
+        <BodySkeleton />
+      </div>
+    </div>
+  );
+}
+
 export function BodySkeleton() {
   return (
     <div className="sk-body" aria-busy="true" aria-label="Loading">

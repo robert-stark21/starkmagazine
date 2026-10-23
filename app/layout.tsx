@@ -3,6 +3,11 @@ import type { Metadata } from "next";
 import { getLang } from "@/lib/lang";
 import { AutoRefresh, CardTransitions, Spotlight } from "@/components/client";
 import { REFRESH_SECONDS } from "@/lib/feeds";
+import { Manrope } from "next/font/google";
+
+// Self-hosted at build time (no request to Google at runtime), with Vietnamese glyphs.
+// latin-ext holds ă, đ, ơ, ư: preloading it avoids a layout shift when it arrives late.
+const manrope = Manrope({ subsets: ["latin", "latin-ext", "vietnamese"], display: "swap", variable: "--font-sans" });
 
 export const metadata: Metadata = {
   title: "Magazine · Tin tức tổng hợp",
@@ -12,7 +17,7 @@ export const metadata: Metadata = {
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const lang = await getLang();
   return (
-    <html lang={lang}>
+    <html lang={lang} className={manrope.variable}>
       <body>
         {children}
         <AutoRefresh seconds={REFRESH_SECONDS} />

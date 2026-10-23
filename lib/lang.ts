@@ -26,6 +26,10 @@ export const UI = {
     related: "Cùng chuyên mục",
     fullUnavailable: "Không lấy được toàn văn bài viết, đang hiển thị phần mô tả từ nguồn.",
     sources: "nguồn",
+    sourceLabel: "Nguồn",
+    publishedLabel: "Đăng lúc",
+    readingLabel: "Thời gian đọc",
+    openOriginal: "Mở bài gốc",
     ago: { m: "phút trước", h: "giờ trước", d: "ngày trước", now: "vừa xong" },
   },
   en: {
@@ -47,6 +51,10 @@ export const UI = {
     related: "More in this section",
     fullUnavailable: "Could not load the full article, showing the source description instead.",
     sources: "sources",
+    sourceLabel: "Source",
+    publishedLabel: "Published",
+    readingLabel: "Reading time",
+    openOriginal: "Open original",
     ago: { m: "min ago", h: "h ago", d: "d ago", now: "just now" },
   },
 } as const;

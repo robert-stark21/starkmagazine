@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { imageSrcSet, SIZES } from "@/lib/img";
+import { imageSrcSet, imgSrc, SIZES } from "@/lib/img";
 import { ShinyText } from "@/components/BlurText";
 import { getAllArticles, hasUntranslated, lastUpdated, localize } from "@/lib/feeds";
 import { RefreshSoon } from "@/components/client";
@@ -32,7 +32,7 @@ export default async function Home() {
     <>
       {/* Start the hero image download with the HTML (React moves this into <head>). */}
       {hero?.image && (
-        <link rel="preload" as="image" href={hero.image} imageSrcSet={imageSrcSet(hero.image)} imageSizes={SIZES.hero} fetchPriority="high" />
+        <link rel="preload" as="image" href={imgSrc(hero.image)} imageSrcSet={imageSrcSet(hero.image)} imageSizes={SIZES.hero} fetchPriority="high" />
       )}
       {pending && <RefreshSoon />}
       <Header lang={lang} updated={lastUpdated()} />

@@ -21,6 +21,20 @@ export function imageSrcSet(src?: string): string | undefined {
   return undefined;
 }
 
+/** Image servers too slow for browsers to load a gallery from; served through /api/img. */
+export const SLOW_IMAGE_HOSTS = new Set(["cms.abduzeedo.com"]);
+
+/** The URL to put in <img src>: slow hosts go through our image relay. */
+export function imgSrc(src: string): string;
+export function imgSrc(src?: string): string | undefined;
+export function imgSrc(src?: string) {
+  if (!src) return src;
+  try {
+    if (SLOW_IMAGE_HOSTS.has(new URL(src).hostname)) return `/api/img?u=${encodeURIComponent(src)}`;
+  } catch {}
+  return src;
+}
+
 /** Image widths on screen: full width on phones, a grid column or the hero on desktop. */
 export const SIZES = {
   card: "(max-width: 520px) 100vw, (max-width: 1024px) 50vw, 300px",

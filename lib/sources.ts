@@ -13,6 +13,8 @@ export type Source = {
   category: string;
   lang: Lang;
   region: "vn" | "intl";
+  /** The feed has no pictures: take each article's og:image from its page. */
+  pageImages?: boolean;
 };
 
 export const CATEGORIES: Category[] = [
@@ -53,6 +55,7 @@ export const SOURCES: Source[] = [
   // Thể thao
   { name: "VnExpress Thể thao", url: "https://vnexpress.net/rss/the-thao.rss", category: "the-thao", lang: "vi", region: "vn" },
   { name: "Thanh Niên Thể thao", url: "https://thanhnien.vn/rss/the-thao.rss", category: "the-thao", lang: "vi", region: "vn" },
+  { name: "Bongda.com.vn", url: "https://bongda.com.vn/feed.rss", category: "the-thao", lang: "vi", region: "vn", pageImages: true },
   // Foreign football outlets, chosen because their pages give the full article text.
   { name: "The Guardian Football", url: "https://www.theguardian.com/football/rss", category: "the-thao", lang: "en", region: "intl" },
   { name: "Sky Sports Football", url: "https://www.skysports.com/rss/11095", category: "the-thao", lang: "en", region: "intl" },
