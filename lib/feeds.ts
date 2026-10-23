@@ -21,6 +21,7 @@ export type Article = {
   region: "vn" | "intl";
   published: string;
   translated?: boolean;
+  pending?: boolean; // shown untranslated because translation was still running
 };
 
 type Item = Record<string, any>;
@@ -175,8 +176,15 @@ async function pretranslate(articles: Article[]) {
   try {
     for (const lang of ["vi", "en"] as Lang[]) {
       const picked = CATEGORIES.flatMap((c) =>
-        articles.filter((a) => a.category === c.slug && a.lang !== lang).slice(0, c.slug === "inspiration" ? 120 : 60)
+        // The 60 newest overall plus the 60 newest per region, so the VN / international
+        // filters on category pages are covered too.
+        ["all", "vn", "intl"].flatMap((r) =>
+          articles
+            .filter((a) => a.category === c.slug && a.lang !== lang && (r === "all" || a.region === r))
+            .slice(0, c.slug === "inspiration" ? 120 : 60)
+        )
       );
+      picked.splice(0, picked.length, ...new Set(picked));
       // Newest first, in small batches, so translations reach the cache (and pages) quickly.
       picked.sort((a, b) => b.published.localeCompare(a.published));
       for (let i = 0; i < picked.length; i += 15) {
@@ -198,6 +206,11 @@ export async function getArticle(id: string): Promise<Article | undefined> {
   return (await getAllArticles()).find((a) => a.id === id);
 }
 
+/** True when some shown articles are still in the other language (translation still running). */
+export function hasUntranslated(articles: Article[], lang: Lang): boolean {
+  return articles.some((a) => a.lang !== lang && a.pending);
+}
+
 /** Translates title and excerpt of articles whose language differs from the reader's choice. */
 export async function localize(articles: Article[], lang: Lang, waitMs = 1500): Promise<Article[]> {
   const need = articles.filter((a) => a.lang !== lang);
@@ -205,13 +218,16 @@ export async function localize(articles: Article[], lang: Lang, waitMs = 1500): 
   const texts = need.flatMap((a) => [a.title, a.excerpt]);
   // Don't hold the page for long: after waitMs show the original text. Translation keeps
   // going in the background and fills the cache for the next visit.
+  let timedOut = false;
   const tr = await Promise.race([
     translateMany(texts, lang),
-    new Promise<string[]>((r) => setTimeout(() => r(texts), waitMs)),
+    new Promise<string[]>((r) => setTimeout(() => ((timedOut = true), r(texts)), waitMs)),
   ]);
   const map = new Map(need.map((a, i) => [a.id, { title: tr[i * 2], excerpt: tr[i * 2 + 1] }]));
   return articles.map((a) => {
     const t = map.get(a.id);
-    return t && t.title !== a.title ? { ...a, ...t, translated: true } : a;
+    if (t && t.title !== a.title) return { ...a, ...t, translated: true };
+    // Still in the original language because we stopped waiting: the page refreshes later.
+    return t && timedOut ? { ...a, pending: true } : a;
   });
 }

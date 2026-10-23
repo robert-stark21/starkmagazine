@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { zodOutputFormat } from "@anthropic-ai/sdk/helpers/zod";
 import { z } from "zod";
+import fs from "node:fs";
+import path from "node:path";
 import type { Lang } from "./sources";
 
 /**
@@ -19,6 +21,33 @@ type Provider = {
 };
 
 const cache = new Map<string, string>();
+
+// ---------- Saved translations ----------
+// Kept on disk so a server restart doesn't show untranslated titles while everything is
+// translated again. On Vercel only /tmp is writable (and it lasts as long as the instance).
+const SAVE_FILE = path.join(process.env.VERCEL ? "/tmp" : path.join(process.cwd(), ".cache"), "translations.json");
+let saveTimer: ReturnType<typeof setTimeout> | undefined;
+
+try {
+  const saved: [string, string][] = JSON.parse(fs.readFileSync(SAVE_FILE, "utf8"));
+  for (const [k, v] of saved.slice(-20000)) cache.set(k, v);
+} catch {}
+
+function saveSoon() {
+  if (saveTimer) return;
+  saveTimer = setTimeout(async () => {
+    saveTimer = undefined;
+    try {
+      await fs.promises.mkdir(path.dirname(SAVE_FILE), { recursive: true });
+      const tmp = `${SAVE_FILE}.${process.pid}.tmp`;
+      await fs.promises.writeFile(tmp, JSON.stringify([...cache]));
+      await fs.promises.rename(tmp, SAVE_FILE);
+    } catch (e) {
+      console.warn("[translate] could not save translations:", String(e));
+    }
+  }, 5000);
+}
+
 const UNIT = 950; // longer texts are split into sentence groups up to this size
 const CONCURRENCY = 5;
 const UA =
@@ -276,6 +305,8 @@ async function translatePending(texts: string[], target: Lang, out: string[], to
     out[i] = parts.join(" ");
     cache.set(`${target}|${texts[i]}`, out[i]);
   }
-  if (cache.size > 20000) cache.clear();
+  // Drop the oldest entries instead of everything when the cache gets big.
+  if (cache.size > 20000) [...cache.keys()].slice(0, cache.size - 15000).forEach((k) => cache.delete(k));
+  saveSoon();
   return out;
 }

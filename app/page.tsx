@@ -1,5 +1,8 @@
 import Link from "next/link";
-import { getAllArticles, lastUpdated, localize } from "@/lib/feeds";
+import { imageSrcSet, SIZES } from "@/lib/img";
+import { ShinyText } from "@/components/BlurText";
+import { getAllArticles, hasUntranslated, lastUpdated, localize } from "@/lib/feeds";
+import { RefreshSoon } from "@/components/client";
 import { CATEGORIES } from "@/lib/sources";
 import { getLang, UI } from "@/lib/lang";
 import { Header } from "@/components/Header";
@@ -23,9 +26,15 @@ export default async function Home() {
   const shown = [hero, ...side, ...sections.flatMap((s) => s.items)].filter(Boolean);
   const loc = new Map((await localize(shown, lang)).map((a) => [a.id, a]));
   const L = (a: (typeof all)[number]) => loc.get(a.id) ?? a;
+  const pending = hasUntranslated([...loc.values()], lang);
 
   return (
     <>
+      {/* Start the hero image download with the HTML (React moves this into <head>). */}
+      {hero?.image && (
+        <link rel="preload" as="image" href={hero.image} imageSrcSet={imageSrcSet(hero.image)} imageSizes={SIZES.hero} fetchPriority="high" />
+      )}
+      {pending && <RefreshSoon />}
       <Header lang={lang} updated={lastUpdated()} />
       <main className="wrap">
         {!hero ? (
@@ -34,7 +43,9 @@ export default async function Home() {
           <section className="lead">
             <ArticleCard a={L(hero)} lang={lang} variant="hero" />
             <aside>
-              <h2 className="h">{t.latest}</h2>
+              <h2 className="h live">
+                <ShinyText text={t.latest} />
+              </h2>
               {side.map((a) => (
                 <ArticleCard key={a.id} a={L(a)} lang={lang} variant="compact" />
               ))}
@@ -43,7 +54,7 @@ export default async function Home() {
         )}
 
         {sections.map(({ c, items }) => (
-          <section key={c.slug} className="sec">
+          <section key={c.slug} className="sec reveal">
             <div className="sec-h" style={{ ["--c" as any]: c.color }}>
               <h2>{c[lang]}</h2>
               <Link href={`/c/${c.slug}`}>{t.seeAll} →</Link>

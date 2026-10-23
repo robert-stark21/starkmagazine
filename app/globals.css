@@ -168,3 +168,100 @@ header.site { background: var(--surface); border-bottom: 1px solid var(--line); 
 .sk-hero { aspect-ratio: 16 / 9; margin: 24px 0; }
 .sk-body { margin-top: 16px; }
 .read-line { margin: 18px 0 0; }
+
+/* ---------- Motion (after React Bits: BlurText, ShinyText, SpotlightCard, AnimatedContent) ---------- */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+:root { --ease-out: cubic-bezier(.22, 1, .36, 1); }
+
+/* Category badges: the category colour, lifted in dark mode so it stays readable. */
+.badge { color: var(--bc); background: color-mix(in srgb, var(--bc) 9%, transparent); }
+@media (prefers-color-scheme: dark) {
+  .badge { color: color-mix(in srgb, var(--bc) 62%, white); background: color-mix(in srgb, var(--bc) 18%, transparent); }
+}
+
+/* Smoother card hover: lift, image zoom and a soft cursor spotlight. */
+.card { position: relative; transition: transform .35s var(--ease-out), box-shadow .35s var(--ease-out), border-color .35s; }
+.card:hover { transform: translateY(-3px); }
+.card .thumb img { transition: transform .6s var(--ease-out), opacity .45s ease; }
+.card:not(.compact):hover .thumb img { transform: scale(1.04); }
+.card:not(.compact)::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; opacity: 0;
+  background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgb(255 255 255 / .16), transparent 60%);
+  transition: opacity .35s ease;
+}
+@media (prefers-color-scheme: light) { .card:not(.compact)::after { background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 0%), rgb(17 24 39 / .06), transparent 60%); } }
+.card:not(.compact):hover::after { opacity: 1; }
+.cats a { transition: color .2s, border-color .25s; }
+
+/* Lazy images fade in once loaded (the hero shows at once). */
+img.fade { opacity: 0; }
+img.fade.in { opacity: 1; }
+
+/* Live "Latest" label with a pulsing dot. */
+.h.live { display: flex; align-items: center; gap: 8px; }
+.h.live::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #ef4444; box-shadow: 0 0 0 0 rgb(239 68 68 / .5); animation: pulse 2s infinite; }
+@keyframes pulse { 70% { box-shadow: 0 0 0 7px rgb(239 68 68 / 0); } 100% { box-shadow: 0 0 0 0 rgb(239 68 68 / 0); } }
+.shiny-text {
+  background: linear-gradient(110deg, var(--muted) 40%, var(--text) 50%, var(--muted) 60%);
+  background-size: 250% 100%; -webkit-background-clip: text; background-clip: text; color: transparent;
+  animation: shine 4s linear infinite;
+}
+@keyframes shine { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+
+/* Words arrive from a soft blur. */
+.blur-text > span[aria-hidden] { display: inline-block; white-space: pre; animation: blur-in .7s var(--ease-out) both; }
+@keyframes blur-in { from { opacity: .001; filter: blur(8px); transform: translateY(6px); } }
+
+/* Each page fades up a little on navigation. */
+.page-in { animation: page-in .45s var(--ease-out) both; }
+@keyframes page-in { from { opacity: .4; transform: translateY(6px); } }
+
+/* Sections and cards rise in as they scroll into view. No JavaScript: browsers without
+   scroll-driven animations simply show everything. */
+@supports (animation-timeline: view()) {
+  .reveal, .grid > .card, .masonry > .card {
+    animation: rise linear both; animation-timeline: view(); animation-range: entry 0% entry 35%;
+  }
+  .reveal .grid > .card { animation: none; }
+  @keyframes rise { from { opacity: 0; transform: translateY(28px); } }
+}
+
+/* Skip rendering work for sections far below the fold. */
+.sec { content-visibility: auto; contain-intrinsic-size: auto 520px; }
+
+/* Article hero keeps its space before the image arrives (no layout shift). */
+.hero-img img { aspect-ratio: 16 / 9; object-fit: cover; background: var(--line); }
+
+/* Smooth scrolling for in-page jumps. */
+html { scroll-behavior: smooth; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+  img.fade { opacity: 1; }
+  .card:hover, .card:not(.compact):hover .thumb img { transform: none; }
+}
+
+/* ---------- Card → article transition (View Transitions API) ----------
+   The list fades out, the clicked title moves and grows into the headline, then the
+   article body fades up in a short stagger. Back runs the same motion in reverse. */
+.detail h1 { view-transition-name: vt-title; }
+::view-transition-group(vt-title) { animation-duration: .6s; animation-timing-function: cubic-bezier(.65, 0, .35, 1); }
+/* Keep the text undistorted while its box changes shape. */
+::view-transition-old(vt-title), ::view-transition-new(vt-title) { height: 100%; object-fit: contain; object-position: left top; }
+::view-transition-old(vt-title) { animation: vt-fade-out .18s ease both; }
+::view-transition-new(vt-title) { animation: vt-fade-in .25s ease .05s both; }
+::view-transition-old(root) { animation: vt-fade-out .22s ease both; }
+::view-transition-new(root) { animation: vt-fade-in .3s ease .3s both; }
+@keyframes vt-fade-out { to { opacity: 0; } }
+@keyframes vt-fade-in { from { opacity: 0; } }
+/* Arriving on the article: no page fade or word blur; the body rises in after the title lands. */
+.vt-arrived .page-in, .vt-arrived .blur-text > span[aria-hidden] { animation: none; }
+.vt-arrived .detail > :not(h1) { animation: vt-rise .45s cubic-bezier(.22, 1, .36, 1) both; animation-delay: .45s; }
+.vt-arrived .detail > .crumb { animation-delay: .4s; }
+.vt-arrived .detail > .detail-meta { animation-delay: .5s; }
+.vt-arrived .detail > .note, .vt-arrived .detail > .hero-img { animation-delay: .58s; }
+.vt-arrived .detail > :nth-child(n + 6) { animation-delay: .66s; }
+@keyframes vt-rise { from { opacity: 0; transform: translateY(12px); } }
+/* Back: the list fades in under the flying headline. */
+.vt-back .page-in { animation: vt-fade-in .35s ease .15s both; }
+@media (prefers-reduced-motion: reduce) { ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; } }

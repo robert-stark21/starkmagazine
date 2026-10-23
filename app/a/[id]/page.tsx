@@ -12,6 +12,8 @@ import { ArticleCard, Meta } from "@/components/ArticleCard";
 import { ProseImage } from "@/components/client";
 import { VideoEmbed } from "@/components/VideoEmbed";
 import { BodySkeleton } from "@/components/Skeletons";
+import { BlurText } from "@/components/BlurText";
+import { imageSrcSet, SIZES } from "@/lib/img";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +41,7 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
           <div className="crumb">
             <Link href={`/c/${cat.slug}`} style={{ color: cat.color }}>{cat[lang]}</Link>
           </div>
-          <h1>{top.title}</h1>
+          <BlurText as="h1" text={top.title} />
           <div className="detail-meta">
             <Meta a={article} lang={lang} showCat={false} />
           </div>
@@ -47,7 +49,15 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
 
           {article.image && (
             <figure className="hero-img">
-              <img src={article.image} alt="" referrerPolicy="no-referrer" />
+              <img
+                src={article.image}
+                srcSet={imageSrcSet(article.image)}
+                sizes={SIZES.hero}
+                alt=""
+                fetchPriority="high"
+                decoding="async"
+                referrerPolicy="no-referrer"
+              />
             </figure>
           )}
 

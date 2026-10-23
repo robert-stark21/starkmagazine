@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllArticles, lastUpdated, localize } from "@/lib/feeds";
+import { getAllArticles, hasUntranslated, lastUpdated, localize } from "@/lib/feeds";
+import { RefreshSoon } from "@/components/client";
 import { getCategory, MOODBOARD, SOURCES } from "@/lib/sources";
 import { getLang, UI } from "@/lib/lang";
 import { Header } from "@/components/Header";
@@ -39,6 +40,7 @@ export default async function CategoryPage({
 
   return (
     <>
+      {hasUntranslated(loc, lang) && <RefreshSoon />}
       <Header lang={lang} active={slug} updated={lastUpdated()} />
       <main className="wrap">
         <div className="page-h" style={{ ["--c" as any]: cat.color }}>
@@ -52,8 +54,8 @@ export default async function CategoryPage({
         </div>
         {loc.length ? (
           <div className={moodboard ? "masonry" : "grid"}>
-            {loc.map((a) => (
-              <ArticleCard key={a.id} a={a} lang={lang} showCat={false} variant={moodboard ? "tile" : "default"} />
+            {loc.map((a, i) => (
+              <ArticleCard key={a.id} a={a} lang={lang} showCat={false} variant={moodboard ? "tile" : "default"} priority={i < 2} />
             ))}
           </div>
         ) : (

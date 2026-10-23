@@ -3,14 +3,16 @@ import type { Article } from "@/lib/feeds";
 import { getCategory, type Lang } from "@/lib/sources";
 import { timeAgo, UI } from "@/lib/lang";
 import { readingTime } from "@/lib/text";
+import { imageSrcSet, SIZES } from "@/lib/img";
 import { Thumb } from "./client";
+import { BlurText } from "./BlurText";
 
 export function Meta({ a, lang, showCat = true }: { a: Article; lang: Lang; showCat?: boolean }) {
   const cat = getCategory(a.category)!;
   return (
     <div className="meta">
       {showCat && (
-        <span className="badge" style={{ color: cat.color, background: `${cat.color}14` }}>
+        <span className="badge" style={{ ["--bc" as any]: cat.color }}>
           {cat[lang]}
         </span>
       )}
@@ -26,20 +28,32 @@ export function ArticleCard({
   lang,
   variant = "default",
   showCat = true,
+  priority = false,
 }: {
   a: Article;
   lang: Lang;
   variant?: "hero" | "default" | "compact" | "tile";
   showCat?: boolean;
+  priority?: boolean; // above the fold: load at once, no fade
 }) {
   const cat = getCategory(a.category)!;
   return (
     <article className={`card ${variant}`}>
       <Link href={`/a/${a.id}`} className="cover">
-        {variant !== "compact" && <Thumb src={a.image} alt="" color={cat.color} label={cat[lang]} />}
+        {variant !== "compact" && (
+          <Thumb
+            src={a.image}
+            srcSet={imageSrcSet(a.image)}
+            sizes={variant === "hero" ? SIZES.hero : SIZES.card}
+            priority={priority || variant === "hero"}
+            alt=""
+            color={cat.color}
+            label={cat[lang]}
+          />
+        )}
         <div className="body">
           <Meta a={a} lang={lang} showCat={showCat} />
-          <h3>{a.title}</h3>
+          {variant === "hero" ? <BlurText as="h3" text={a.title} /> : <h3>{a.title}</h3>}
           {variant !== "compact" && variant !== "tile" && a.excerpt && <p>{a.excerpt}</p>}
           <div className="foot">
             {readingTime(a.text)} {UI[lang].minRead}

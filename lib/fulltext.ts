@@ -74,10 +74,19 @@ function fixImages(document: any) {
   }
 }
 
-const JUNK = /logo|icon|avatar|sprite|pixel|badge|emoji|banner|placeholder|spacer|blank\.|\/ads?\//i;
+const JUNK = /logo|icon|avatar|sprite|pixel|badge|emoji|banner|placeholder|spacer|blank\.|\/ads?\/|author|byline|profile|gravatar|\/users?\//i;
+/** Size written in the URL: zoom/80_80, /100x100/, w=96 ... */
+const SMALL_IN_URL = /(?:zoom|resize|thumb)\/(\d{2,3})_(\d{2,3})\/|\/(\d{2,3})x(\d{2,3})\/|[?&]w(?:idth)?=(\d{2,3})(?:&|$)/i;
 
 function keepImage(img: any, src: string): boolean {
   if (/^data:|\.svg(\?|$)/i.test(src) || JUNK.test(src)) return false;
+  const m = src.match(SMALL_IN_URL);
+  if (m) {
+    const w = +(m[1] ?? m[3] ?? m[5]);
+    const h = +(m[2] ?? m[4] ?? 999);
+    if (w < 200 || h < 120) return false;
+  }
+  if (/avatar|author|byline|profile/i.test(`${img.getAttribute("class") ?? ""} ${img.getAttribute("alt") ?? ""}`)) return false;
   const w = parseInt(img.getAttribute("width") ?? img.getAttribute("w") ?? "", 10);
   const h = parseInt(img.getAttribute("height") ?? img.getAttribute("h") ?? "", 10);
   if ((w && w < 200) || (h && h < 120)) return false;
@@ -101,10 +110,19 @@ function imageKey(u: string): string {
  */
 type Marked = { src: string; spare: boolean };
 
+/** The story body on sites we know (Thanh Niên, Tuổi Trẻ, VnExpress, WordPress, ...). */
+const BODY =
+  ".detail-content, .detail__content, .fck_detail, .singular-content, .entry-content, .article-body, .article__body, .article-content, .post-content, [itemprop=articleBody]";
+/** Share buttons, follow banners and logos, matched on whole words in the image path, class or alt. */
+const SOCIAL = /(?:^|[\/_. -])(?:facebook|twitter|x-x2|mail-x2|zalo|follow|google-?news|gg-?news|share-?(?:icon|btn|button)|social-?icon|logo|icon|sprite)(?:[\/_. -]|\d|$)/i;
+
 function markImages(document: any, pageUrl: string): Marked[] {
   const srcs: Marked[] = [];
-  const MAIN = "article, main, [itemprop=articleBody]";
+  // Spare photos (see below) must sit in the story body when we can find it.
+  const body = document.querySelector(BODY);
+  const MAIN = body ? BODY : "article, main, [itemprop=articleBody]";
   const hasMain = !!document.querySelector(MAIN);
+  const home = new URL(pageUrl).origin;
   for (const img of Array.from(document.querySelectorAll("img")) as any[]) {
     let src: string;
     try {
@@ -116,13 +134,24 @@ function markImages(document: any, pageUrl: string): Marked[] {
       img.remove();
       continue;
     }
-    if (!keepImage(img, src)) {
+    const link = img.closest("a")?.getAttribute("href") ?? "";
+    let linkUrl: URL | undefined;
+    try {
+      linkUrl = link ? new URL(link, pageUrl) : undefined;
+    } catch {}
+    const social =
+      SOCIAL.test(new URL(src).pathname) ||
+      SOCIAL.test(`${img.getAttribute("class") ?? ""} ${img.getAttribute("alt") ?? ""}`) ||
+      // Share and follow toolbars (the image's own class is skipped: Daily Mail tags photos "img-share").
+      !!img.parentElement?.closest("[class*='share'], [class*='social'], [class*='follow'], [class*='google-news']") ||
+      // Banners that link to the publisher's home page or to Google News.
+      (!!linkUrl && (linkUrl.href === `${home}/` || /news\.google\./.test(linkUrl.hostname)));
+    if (social || !keepImage(img, src)) {
       img.remove();
       continue;
     }
     // "Spare" images sit in the main content area but outside the text Readability keeps
     // (e.g. a photo panel beside the text). They are added at the end if Readability drops them.
-    const link = img.closest("a")?.getAttribute("href") ?? "";
     const spare =
       (hasMain ? !!img.closest(MAIN) : true) &&
       !img.closest("aside, nav, footer, header") &&
@@ -249,9 +278,17 @@ const BOILERPLATE = [
   "[data-testid*='newsletter']",
 ].join(",");
 
+/** Author boxes: avatar plus name, e.g. Thanh Niên's "author-info". */
+const BYLINE = "[class*='author'], [class*='byline'], [rel='author'], [class*='avatar'], [itemprop='author'], a[href*='/author/'], a[href*='/tac-gia/']";
+
 function removeBoilerplate(document: any) {
   for (const el of Array.from(document.querySelectorAll(BOILERPLATE)) as any[]) {
     if (el.isConnected && !el.matches("article, main, body")) el.remove();
+  }
+  // Only small boxes, so a wrapper that happens to carry an "author" class keeps the story.
+  for (const el of Array.from(document.querySelectorAll(BYLINE)) as any[]) {
+    if (!el.isConnected || el.matches("article, main, body")) continue;
+    if ((el.textContent ?? "").replace(/\s+/g, " ").trim().length <= 80) el.remove();
   }
 }
 
@@ -373,7 +410,9 @@ export async function getFullText(url: string): Promise<FullText | null> {
           walk(raw, (t) => addText(t, tag === "H2" || tag === "H3"), addMarker);
         }
         // Photos from the main content area that Readability left out go at the end, like a gallery.
-        if (images < 3) srcs.forEach((m, i) => m.spare && !used.has(i) && addImage(i));
+        // Story photos carry ids or dates in their path; site artwork ("ting.png") does not.
+        const looksLikePhoto = (src: string) => /\d{3,}/.test(new URL(src).pathname) && !/^static\./.test(new URL(src).hostname);
+        if (images < 3) srcs.forEach((m, i) => m.spare && !used.has(i) && looksLikePhoto(m.src) && addImage(i));
         vids.forEach((v, i) => v.spare && !usedVid.has(i) && addVideo(i));
         const paragraphs = blocks.flatMap((b) => (b.type === "text" ? [b.text] : []));
         if (paragraphs.join(" ").length > 300) result = { blocks, paragraphs, image };

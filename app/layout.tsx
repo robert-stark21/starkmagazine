@@ -1,7 +1,7 @@
 import "./globals.css";
 import type { Metadata } from "next";
 import { getLang } from "@/lib/lang";
-import { AutoRefresh } from "@/components/client";
+import { AutoRefresh, CardTransitions, Spotlight } from "@/components/client";
 import { REFRESH_SECONDS } from "@/lib/feeds";
 
 export const metadata: Metadata = {
@@ -16,6 +16,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body>
         {children}
         <AutoRefresh seconds={REFRESH_SECONDS} />
+        <Spotlight />
+        <CardTransitions />
         <footer className="foot-site">
           <div className="wrap">
             © Magazine · {lang === "vi" ? "Nội dung thuộc về các nguồn báo gốc." : "All content belongs to the original publishers."}
