@@ -21,8 +21,11 @@
 }
 * { box-sizing: border-box; }
 html, body { margin: 0; }
+/* The page colour sits on <html>; <body> stays clear so the grain (z-index -1) shows on
+   the bare page background only, under cards, images, text and the header. */
+html { background: var(--bg); }
 body {
-  background: var(--bg);
+  background: transparent;
   color: var(--text);
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
   font-size: 16px;
@@ -437,8 +440,8 @@ a, button { touch-action: manipulation; }
 }
 
 /* ---------- Film grain (after React Bits: Noise) ---------- */
-.grain { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 60; opacity: .06; image-rendering: pixelated; }
-@media (prefers-color-scheme: dark) { .grain { opacity: .05; } }
+.grain { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: -1; opacity: .03; image-rendering: pixelated; }
+@media (prefers-color-scheme: dark) { .grain { opacity: .025; } }
 
 /* ---------- Kindle switch ---------- */
 .kindle-toggle {
@@ -459,8 +462,7 @@ a, button { touch-action: manipulation; }
 }
 /* Category colours and badges become ink (stylesheet !important beats the inline colour). */
 .kindle * { --c: #3b3934 !important; --bc: #3b3934 !important; }
-.kindle body { background: var(--bg); color: var(--text); }
-.kindle header.site, .kindle .card, .kindle .summary, .kindle .d-orig { background: var(--bg); }
+.kindle body { background: transparent; color: var(--text); }
 .kindle .card { border-color: var(--line); }
 .kindle *, .kindle *::before, .kindle *::after { box-shadow: none !important; text-shadow: none !important; }
 /* Pictures and video in greys, a touch flat like an e-ink panel. */
@@ -481,7 +483,7 @@ a, button { touch-action: manipulation; }
 .kindle .card:not(.compact)::after { display: none; }
 .kindle .reveal, .kindle .grid > .card, .kindle .masonry > .card, .kindle .blur-text > span[aria-hidden], .kindle .page-in { animation: none !important; }
 /* Heavier paper grain. */
-.kindle .grain { opacity: .11; }
+.kindle .grain { opacity: .07; }
 /* Book face for reading. */
 .kindle .prose, .kindle .summary li, .kindle .dek { font-family: var(--font-reading), Georgia, serif; }
 .kindle .prose { font-size: 19px; line-height: 1.68; }
