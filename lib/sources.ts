@@ -58,7 +58,6 @@ export const SOURCES: Source[] = [
   { name: "Dezeen", url: "https://www.dezeen.com/feed/", category: "design", lang: "en", region: "intl" },
   { name: "designboom", url: "https://www.designboom.com/feed/", category: "design", lang: "en", region: "intl" },
   { name: "Creative Bloq", url: "https://www.creativebloq.com/feeds/all", category: "design", lang: "en", region: "intl" },
-  { name: "Brands Vietnam", url: "https://www.brandsvietnam.com/rss/tieu-diem", category: "design", lang: "vi", region: "vn" },
 
   // UI/UX
   { name: "Smashing Magazine", url: "https://www.smashingmagazine.com/feed/", category: "ui-ux", lang: "en", region: "intl" },

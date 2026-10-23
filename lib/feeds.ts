@@ -48,11 +48,14 @@ function findImage(item: Item): string | undefined {
 async function fetchSource(src: Source): Promise<Article[]> {
   const res = await fetch(src.url, {
     headers: { "User-Agent": "Mozilla/5.0 (compatible; TinTongHop/1.0; +rss reader)" },
-    next: { revalidate: REFRESH_SECONDS },
+    // We cache parsed results in memory below, so skip Next's fetch cache (it rejects feeds over 2MB).
+    cache: "no-store",
     signal: AbortSignal.timeout(12000),
   });
   if (!res.ok) throw new Error(`${src.name}: ${res.status}`);
-  const feed = await parser.parseString(await res.text());
+  // Some feeds contain a bare "&" which breaks the XML parser.
+  const xml = (await res.text()).replace(/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;");
+  const feed = await parser.parseString(xml);
   return (feed.items ?? []).slice(0, 20).flatMap((item) => {
     const link = item.link?.trim();
     const title = stripHtml(item.title ?? "");
