@@ -15,6 +15,8 @@ export type Source = {
   region: "vn" | "intl";
   /** The feed has no pictures: take each article's og:image from its page. */
   pageImages?: boolean;
+  /** No usable feed: url is a listing page read by this scraper (lib/scrapers.ts). */
+  scrape?: import("./scrapers").ScraperName;
 };
 
 export const CATEGORIES: Category[] = [
@@ -78,6 +80,7 @@ export const SOURCES: Source[] = [
 
   // UI/UX
   { name: "Smashing Magazine", url: "https://www.smashingmagazine.com/feed/", category: "ui-ux", lang: "en", region: "intl" },
+  { name: "Interaction Design Foundation", url: "https://ixdf.org/rss/site_news.xml", category: "ui-ux", lang: "en", region: "intl", pageImages: true },
   { name: "UX Collective", url: "https://uxdesign.cc/feed", category: "ui-ux", lang: "en", region: "intl" },
   { name: "Nielsen Norman Group", url: "https://www.nngroup.com/feed/rss/", category: "ui-ux", lang: "en", region: "intl" },
   { name: "UX Planet", url: "https://uxplanet.org/feed", category: "ui-ux", lang: "en", region: "intl" },
@@ -108,6 +111,9 @@ export const SOURCES: Source[] = [
   { name: "Booooooom", url: "https://www.booooooom.com/feed/", category: "inspiration", lang: "en", region: "intl" },
   { name: "Abduzeedo", url: "https://abduzeedo.com/rss.xml", category: "inspiration", lang: "en", region: "intl" },
   { name: "Behance", url: "https://www.behance.net/feeds/projects", category: "inspiration", lang: "en", region: "intl" },
+  // Award-winning websites; no usable feeds, so their listings are read (lib/scrapers.ts).
+  { name: "Awwwards", url: "https://www.awwwards.com/websites/sites_of_the_day/", category: "inspiration", lang: "en", region: "intl", scrape: "awwwards" },
+  { name: "CSS Design Awards", url: "https://www.cssdesignawards.com/wotd-award-winners", category: "inspiration", lang: "en", region: "intl", scrape: "cssda" },
   { name: "Creative Boom", url: "https://www.creativeboom.com/feed/", category: "inspiration", lang: "en", region: "intl" },
   { name: "Yanko Design", url: "https://www.yankodesign.com/feed/", category: "inspiration", lang: "en", region: "intl" },
   { name: "designboom Tech", url: "https://www.designboom.com/technology/feed/", category: "inspiration", lang: "en", region: "intl" },

@@ -4,6 +4,7 @@ import { excerpt, stripHtml, toId } from "./text";
 import { translateMany } from "./translate";
 import { videoFromUrl } from "./fulltext";
 import { mockArticles } from "./mock";
+import { SCRAPERS } from "./scrapers";
 
 export const REFRESH_SECONDS = 600; // 10 minutes
 
@@ -22,6 +23,7 @@ export type Article = {
   published: string;
   translated?: boolean;
   pending?: boolean; // shown untranslated because translation was still running
+  keepTitle?: boolean; // the title is a name (an award-winning website): never translated
 };
 
 type Item = Record<string, any>;
@@ -94,6 +96,24 @@ function decodeBody(bytes: Uint8Array, contentType: string | null): string {
 }
 
 async function fetchSource(src: Source): Promise<Article[]> {
+  if (src.scrape) {
+    // Listing pages of sites without a feed (Awwwards, CSS Design Awards).
+    const items = await SCRAPERS[src.scrape](src.url);
+    return items.slice(0, 20).map((it) => ({
+      id: toId(it.link),
+      title: it.title,
+      link: it.link,
+      excerpt: it.excerpt ?? "",
+      text: it.excerpt ?? "",
+      image: it.image,
+      source: src.name,
+      category: src.category,
+      lang: src.lang,
+      region: src.region,
+      published: it.published,
+      keepTitle: true,
+    }));
+  }
   const res = await fetch(src.url, {
     headers: { "User-Agent": "Mozilla/5.0 (compatible; TinTongHop/1.0; +rss reader)" },
     // We cache parsed results in memory below, so skip Next's fetch cache (it rejects feeds over 2MB).
@@ -260,7 +280,8 @@ export function hasUntranslated(articles: Article[], lang: Lang): boolean {
 export async function localize(articles: Article[], lang: Lang, waitMs = 1500): Promise<Article[]> {
   const need = articles.filter((a) => a.lang !== lang);
   if (!need.length) return articles;
-  const texts = need.flatMap((a) => [a.title, a.excerpt]);
+  // Names (award-winning websites) keep their title; an empty string is not translated.
+  const texts = need.flatMap((a) => [a.keepTitle ? "" : a.title, a.excerpt]);
   // Don't hold the page for long: after waitMs show the original text. Translation keeps
   // going in the background and fills the cache for the next visit.
   let timedOut = false;
@@ -268,10 +289,10 @@ export async function localize(articles: Article[], lang: Lang, waitMs = 1500): 
     translateMany(texts, lang),
     new Promise<string[]>((r) => setTimeout(() => ((timedOut = true), r(texts)), waitMs)),
   ]);
-  const map = new Map(need.map((a, i) => [a.id, { title: tr[i * 2], excerpt: tr[i * 2 + 1] }]));
+  const map = new Map(need.map((a, i) => [a.id, { title: a.keepTitle ? a.title : tr[i * 2], excerpt: tr[i * 2 + 1] }]));
   return articles.map((a) => {
     const t = map.get(a.id);
-    if (t && t.title !== a.title) return { ...a, ...t, translated: true };
+    if (t && (t.title !== a.title || t.excerpt !== a.excerpt)) return { ...a, ...t, translated: true };
     // Still in the original language because we stopped waiting: the page refreshes later.
     return t && timedOut ? { ...a, pending: true } : a;
   });

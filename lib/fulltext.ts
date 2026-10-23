@@ -348,7 +348,7 @@ const PROMO_STRONG = new RegExp(
   [
     "\\bgot sky\\?", "\\bnot got sky\\b", "\\btransfer centre\\b", "\\bfixtures (?:&|and) (?:results|scores)\\b",
     "\\bfree .{0,30}highlights\\b", "\\bsky sports (?:deals|offers)\\b", "\\b(?:with ?out|no) (?:a )?contract\\b",
-    "^read (?:more|next)\\b", "^published: .{0,40}\\d{4}", "^related:", "\\bdownload (?:the|our) app\\b", "\\bclick here\\b", "\\bafter newsletter promotion\\b", "\\byou'll now receive updates\\b", "^cite: ",
+    "^read (?:more|next)\\b", "^published: .{0,40}\\d{4}", "^related:", "\\bdownload (?:the|our) app\\b", "\\bclick here\\b", "\\bafter newsletter promotion\\b", "\\byou'll now receive updates\\b", "^cite: ", "^by\\s*•.{0,40}min read", // IxDF: "by • 1 week ago • 20 min read"
     "^(?:xem thêm|đọc thêm|tin liên quan)\\s*:", "đăng ký nhận bản tin", "tải ứng dụng",
     "^[✦★►▶»•\\s]+xem thêm\\b", // RGB: "✦ Xem thêm cảm hứng nhà đẹp ... cùng ARC Vibes"
   ].join("|"),
@@ -393,6 +393,48 @@ function walk(raw: string, onText: (t: string) => void, onMarker: (kind: string,
   }
 }
 
+/**
+ * Awwwards and CSS Design Awards site pages: the description (full paragraph when found,
+ * else the meta description) and the large screenshots. Null for any other page.
+ */
+function awardPage(document: any, url: string): FullText | null {
+  const host = new URL(url).hostname;
+  const isAww = /(^|\.)awwwards\.com$/.test(host) && url.includes("/sites/");
+  const isCssda = /(^|\.)cssdesignawards\.com$/.test(host) && url.includes("/sites/");
+  if (!isAww && !isCssda) return null;
+  const meta = (p: string) => document.querySelector(`meta[property="${p}"], meta[name="${p}"]`)?.getAttribute("content")?.trim() ?? "";
+  let desc = meta("og:description") || meta("description");
+  // The meta text is often cut ("..."): find the full paragraph that starts the same way.
+  const start = desc.replace(/\.{3}$|…$/, "").slice(0, 40);
+  if (start) {
+    const full = (Array.from(document.querySelectorAll("p, div")) as any[])
+      .map((e) => (e.textContent ?? "").replace(/\s+/g, " ").trim())
+      .filter((t) => t.startsWith(start) && t.length >= desc.length - 3 && t.length < 1500)
+      .sort((a, b) => a.length - b.length)[0];
+    if (full) desc = full;
+  }
+  const shots = new Set<string>();
+  const html: string = document.documentElement?.outerHTML ?? "";
+  if (isAww) {
+    // Screenshots of this submission (not the jury avatars or collection covers).
+    for (const m of html.matchAll(/https:\/\/assets\.awwwards\.com\/awards\/(?:media\/cache\/[a-z0-9_]+\/)?submissions\/\d{4}\/\d{2}\/[\w.-]+\.(?:png|jpe?g|webp)/gi)) {
+      shots.add(m[0].replace(/\/media\/cache\/[a-z0-9_]+\//, "/"));
+    }
+  } else {
+    for (const m of html.matchAll(/\/cdasites\/\d{4}\/\d{6}\/\d+\.(?:jpe?g|png|webp)/gi)) shots.add(new URL(m[0], url).href);
+  }
+  const og = meta("og:image");
+  // Awwwards: only this site's screenshots, uploaded in the same month folder as its cover
+  // (other submissions/... files on the page are collection covers).
+  const folder = isAww ? og.match(/submissions\/\d{4}\/\d{2}\//)?.[0] : undefined;
+  const images = [...shots].filter((s) => (!og || s.split("/").pop() !== og.split("/").pop()) && (!folder || s.includes(folder)));
+  const blocks: Block[] = [];
+  if (desc) blocks.push({ type: "text", text: desc });
+  for (const src of images.slice(0, 12)) blocks.push({ type: "image", src });
+  if (!blocks.length) return null;
+  return { blocks, paragraphs: desc ? [desc] : [], image: og || [...shots][0] };
+}
+
 /** Fetches the article page and extracts its text and images in order. Returns null if that fails. */
 export async function getFullText(url: string): Promise<FullText | null> {
   const hit = cache.get(url);
@@ -404,6 +446,13 @@ export async function getFullText(url: string): Promise<FullText | null> {
     if (res.ok) {
       const { document } = parseHTML(await res.text());
       const image = document.querySelector('meta[property="og:image"]')?.getAttribute("content") ?? undefined;
+      // Award showcase pages are mostly jury lists and FAQs: keep just the site's
+      // description and its screenshots.
+      const award = awardPage(document, url);
+      if (award) {
+        cache.set(url, { at: Date.now(), value: award });
+        return award;
+      }
       removeBoilerplate(document);
       fixImages(document);
       const vids = markVideos(document, url);
