@@ -80,14 +80,29 @@ function parseDate(raw?: string): string {
   return new Date().toISOString();
 }
 
+/** Decodes the feed using its declared charset (header or XML prolog), defaulting to UTF-8. */
+function decodeBody(bytes: Uint8Array, contentType: string | null): string {
+  const head = new TextDecoder("latin1").decode(bytes.slice(0, 300));
+  const charset =
+    contentType?.match(/charset=["']?([\w-]+)/i)?.[1] ?? head.match(/encoding=["']([\w-]+)["']/i)?.[1] ?? "utf-8";
+  try {
+    return new TextDecoder(charset.toLowerCase()).decode(bytes);
+  } catch {
+    return new TextDecoder("utf-8").decode(bytes);
+  }
+}
+
 async function fetchSource(src: Source): Promise<Article[]> {
   const res = await fetch(src.url, {
     headers: { "User-Agent": "Mozilla/5.0 (compatible; TinTongHop/1.0; +rss reader)" },
-    next: { revalidate: REFRESH_SECONDS },
+    // We cache parsed results in memory below, so skip Next's fetch cache (it rejects feeds over 2MB).
+    cache: "no-store",
     signal: AbortSignal.timeout(12000),
   });
   if (!res.ok) throw new Error(`${src.name}: ${res.status}`);
-  const feed = await parser.parseString(await res.text());
+  // Some feeds contain a bare "&" which breaks the XML parser.
+  const xml = decodeBody(new Uint8Array(await res.arrayBuffer()), res.headers.get("content-type")).replace(/&(?!(?:[a-zA-Z][a-zA-Z0-9]*|#\d+|#x[0-9a-fA-F]+);)/g, "&amp;");
+  const feed = await parser.parseString(xml);
   return (feed.items ?? []).slice(0, 20).flatMap((item) => {
     const link = item.link?.trim();
     const title = stripHtml(item.title ?? "");
