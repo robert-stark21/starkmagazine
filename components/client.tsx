@@ -104,26 +104,52 @@ const TICKER_NAMES: Record<string, { vi: string; en: string }> = {
  * rendered, refreshes every minute without restarting the scroll, and hides itself when
  * there is nothing to show. The list is doubled so the loop is seamless.
  */
+/** Pages with the price ticker: home, Finance and Crypto. Elsewhere it would distract. */
+const TICKER_PAGES = new Set(["/", "/c/tai-chinh", "/c/crypto"]);
+
 export function PriceTicker({ initial, lang }: { initial: Quote[]; lang: "vi" | "en" }) {
+  const show = TICKER_PAGES.has(usePathname());
   const [quotes, setQuotes] = useState(initial);
+  const [fresh, setFresh] = useState(initial.length > 0);
   const track = useRef<HTMLDivElement>(null);
+  const row = useRef<HTMLDivElement>(null);
   useEffect(() => {
+    if (!show) return; // no requests on pages without the ticker
     let stop = false;
     const load = () =>
       fetch("/api/prices")
         .then((r) => (r.ok ? r.json() : null))
-        .then((d) => { if (!stop && d?.quotes?.length) setQuotes(d.quotes); })
+        .then((d) => { if (!stop && d?.quotes?.length) { setQuotes(d.quotes); setFresh(true); } })
         .catch(() => {});
-    if (!initial.length) load();
+    if (!fresh) load();
     const t = setInterval(load, 60_000);
     return () => { stop = true; clearInterval(t); };
-  }, [initial.length]);
+  }, [show, fresh]);
   // Constant speed whatever the number of items: about 40px per second.
   useEffect(() => {
     const el = track.current;
     if (el) el.style.setProperty("--ticker-time", `${Math.max(20, el.scrollWidth / 2 / 40)}s`);
-  }, [quotes.length]);
-  if (!quotes.length) return null;
+  }, [quotes.length, show]);
+  // Fade and blur out over the first 70px of scroll. CSS does it with a scroll-driven
+  // animation where supported; this rAF fallback covers the other browsers.
+  useEffect(() => {
+    const el = row.current;
+    if (!show || !el || CSS.supports("animation-timeline: scroll()")) return;
+    const still = matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let frame = 0;
+    const update = () => {
+      frame = 0;
+      const k = Math.min(1, scrollY / 70);
+      el.style.opacity = String(still ? (k < 1 ? 1 : 0) : 1 - k);
+      el.style.filter = still ? "" : `blur(${(k * 6).toFixed(1)}px)`;
+      el.style.transform = still ? "" : `translateY(${(-k * 8).toFixed(1)}px)`;
+    };
+    const onScroll = () => { if (!frame) frame = requestAnimationFrame(update); };
+    update();
+    addEventListener("scroll", onScroll, { passive: true });
+    return () => { removeEventListener("scroll", onScroll); cancelAnimationFrame(frame); };
+  }, [show]);
+  if (!show || !quotes.length) return null;
 
   const loc = lang === "vi" ? "vi-VN" : "en-US";
   const fmt = (q: Quote) => {
@@ -146,7 +172,7 @@ export function PriceTicker({ initial, lang }: { initial: Quote[]; lang: "vi" | 
     );
   };
   return (
-    <div className="ticker" role="region" aria-label={lang === "vi" ? "Giá thị trường" : "Market prices"}>
+    <div className="ticker" ref={row} role="region" aria-label={lang === "vi" ? "Giá thị trường" : "Market prices"}>
       <div className="ticker-track" ref={track} aria-hidden="true">
         <div className="ticker-group">{quotes.map((q) => item(q, `a${q.sym}`))}</div>
         <div className="ticker-group">{quotes.map((q) => item(q, `b${q.sym}`))}</div>

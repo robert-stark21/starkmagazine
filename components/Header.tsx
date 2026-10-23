@@ -15,6 +15,7 @@ export async function Header({ lang, updated, kindle }: { lang: Lang; updated: D
   }).format(new Date());
   const time = new Intl.DateTimeFormat("vi-VN", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Ho_Chi_Minh" }).format(updated);
   return (
+    <>
     <header className="site">
       <div className="wrap top">
         <Link href="/" className="brand" aria-label="STARK">
@@ -33,7 +34,9 @@ export async function Header({ lang, updated, kindle }: { lang: Lang; updated: D
           ...CATEGORIES.map((c) => ({ href: `/c/${c.slug}`, slug: c.slug, label: c[lang], color: c.color })),
         ]}
       />
-      <PriceTicker initial={quotes} lang={lang} />
     </header>
+    {/* Outside the sticky header: it scrolls away (fading out) while the header stays. */}
+    <PriceTicker initial={quotes} lang={lang} />
+    </>
   );
 }
