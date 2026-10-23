@@ -366,7 +366,7 @@ a, button { -webkit-tap-highlight-color: transparent; }
   .chip { padding: 8px 14px; white-space: nowrap; }
   .card.hero .body { padding: 16px 18px 18px; }
   .card.hero p { font-size: 15px; }
-  .masonry { columns: 2; column-gap: 10px; }
+  .masonry { column-width: auto; column-count: 2; column-gap: 10px; }
   .masonry .card { margin-bottom: 10px; }
   .card.tile .body { padding: 10px 10px 12px; }
   .card.tile h3 { font-size: 13px; }
