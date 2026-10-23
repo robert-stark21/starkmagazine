@@ -74,7 +74,28 @@ function fixImages(document: any) {
   }
 }
 
-const JUNK = /logo|icon|avatar|sprite|pixel|badge|emoji|banner|placeholder|spacer|blank\.|\/ads?\/|author|byline|profile|gravatar|\/users?\//i;
+/**
+ * Sharp copy of an inline photo. Some sites put a thumbnail in the page and keep the big
+ * file under another size name:
+ *   ArchDaily  .../thumb_jpg/x.jpg, medium_jpg, newsletter → slideshow (about 1600px)
+ *   WordPress  .../wp-content/uploads/x-300x200.jpg → x.jpg (the uploaded file)
+ */
+export function sharpImage(src: string): string {
+  try {
+    const u = new URL(src);
+    if (/(^|\.)adsttc\.com$/.test(u.hostname)) {
+      u.pathname = u.pathname.replace(/\/(?:thumb|small|medium|large|newsletter)_(?:jpg|png)\/|\/newsletter\//, "/slideshow/");
+      return u.href;
+    }
+    if (u.pathname.includes("/wp-content/uploads/")) {
+      u.pathname = u.pathname.replace(/-(\d{2,4})x(\d{2,4})(?=\.(?:jpe?g|png|webp)$)/i, (m, w) => (+w < 1000 ? "" : m));
+      return u.href;
+    }
+  } catch {}
+  return src;
+}
+
+const JUNK = /loader|spinner|doodles|lazy-?load|logo|icon|avatar|sprite|pixel|badge|emoji|banner|placeholder|spacer|blank\.|\/ads?\/|author|byline|profile|gravatar|\/users?\//i;
 /** Size written in the URL: zoom/80_80, /100x100/, w=96 ... */
 const SMALL_IN_URL = /(?:zoom|resize|thumb)\/(\d{2,3})_(\d{2,3})\/|\/(\d{2,3})x(\d{2,3})\/|[?&]w(?:idth)?=(\d{2,3})(?:&|$)/i;
 
@@ -130,6 +151,13 @@ function markImages(document: any, pageUrl: string): Marked[] {
       // Image proxies (/_next/image?url=...&w=384) serve a small copy; use the original file.
       const inner = new URL(src).searchParams.get("url");
       if (inner && /^https?:\/\//.test(inner)) src = inner;
+      const sharp = sharpImage(src);
+      if (sharp !== src) {
+        // The width/height attributes describe the thumbnail, not the file we now use.
+        img.removeAttribute("width");
+        img.removeAttribute("height");
+        src = sharp;
+      }
     } catch {
       img.remove();
       continue;
@@ -297,7 +325,7 @@ const PROMO_STRONG = new RegExp(
   [
     "\\bgot sky\\?", "\\bnot got sky\\b", "\\btransfer centre\\b", "\\bfixtures (?:&|and) (?:results|scores)\\b",
     "\\bfree .{0,30}highlights\\b", "\\bsky sports (?:deals|offers)\\b", "\\b(?:with ?out|no) (?:a )?contract\\b",
-    "^read (?:more|next)\\b", "^published: .{0,40}\\d{4}", "^related:", "\\bdownload (?:the|our) app\\b", "\\bclick here\\b", "\\bafter newsletter promotion\\b",
+    "^read (?:more|next)\\b", "^published: .{0,40}\\d{4}", "^related:", "\\bdownload (?:the|our) app\\b", "\\bclick here\\b", "\\bafter newsletter promotion\\b", "\\byou'll now receive updates\\b", "^cite: ",
     "^(?:xem thêm|đọc thêm|tin liên quan)\\s*:", "đăng ký nhận bản tin", "tải ứng dụng",
   ].join("|"),
   "i"
