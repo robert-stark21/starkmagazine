@@ -1,6 +1,6 @@
 /**
- * Smaller copies of news images. Sky Sports takes the size in the URL, so a card can ask
- * for a 384px or 768px copy instead of the 1920px original. Other hosts are left alone
+ * Right-sized copies of news images, for hosts that take the size in the URL: a card asks
+ * for a small copy, the article hero for a sharp one. Other hosts are left alone
  * (VnExpress and The Guardian sign their image URLs, so their sizes cannot be changed).
  */
 export function imageSrcSet(src?: string): string | undefined {
@@ -11,6 +11,11 @@ export function imageSrcSet(src?: string): string | undefined {
     if (/(^|\.)365dm\.com$/.test(u.hostname) && /\/\d{3,4}x\d{3,4}\//.test(u.pathname)) {
       const at = (w: number, h: number) => src.replace(/\/\d{3,4}x\d{3,4}\//, `/${w}x${h}/`);
       return `${at(384, 216)} 384w, ${at(768, 432)} 768w, ${at(1600, 900)} 1600w`;
+    }
+    // ArchDaily: .../newsletter/x.jpg is 750px; .../slideshow/x.jpg is about 1600px
+    if (/(^|\.)adsttc\.com$/.test(u.hostname) && /\/(?:newsletter|(?:medium|large)_jpg)\//.test(u.pathname)) {
+      const at = (size: string) => src.replace(/\/(?:newsletter|(?:medium|large)_jpg)\//, `/${size}/`);
+      return `${at("newsletter")} 750w, ${at("slideshow")} 1582w`;
     }
   } catch {}
   return undefined;
