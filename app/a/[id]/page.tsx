@@ -1,15 +1,14 @@
 import { Suspense, type ReactNode } from "react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllArticles, getArticle, lastUpdated, localize, type Article } from "@/lib/feeds";
+import { getAllArticles, getArticle, localize, type Article } from "@/lib/feeds";
 import { getFullText, type Block } from "@/lib/fulltext";
 import { getCategory, type Lang } from "@/lib/sources";
 import { getLang, timeAgo, UI } from "@/lib/lang";
 import { readingTime, splitSentences, summarize } from "@/lib/text";
 import { translateMany } from "@/lib/translate";
-import { Header } from "@/components/Header";
 import { ArticleCard } from "@/components/ArticleCard";
-import { ProseImage } from "@/components/client";
+import { ActiveCategory, ProseImage } from "@/components/client";
 import { VideoEmbed } from "@/components/VideoEmbed";
 import { ArticleBodySkeleton } from "@/components/Skeletons";
 import { BlurText } from "@/components/BlurText";
@@ -35,8 +34,8 @@ export default async function ArticlePage({ params }: { params: Promise<{ id: st
 
   return (
     <>
+      <ActiveCategory slug={article.category} />
       <div className="progress" style={{ ["--c" as any]: cat.color }} aria-hidden="true" />
-      <Header lang={lang} active={article.category} updated={lastUpdated()} />
       <main className="wrap">
         <article className="detail" style={{ ["--c" as any]: cat.color }}>
           <header className="d-head">

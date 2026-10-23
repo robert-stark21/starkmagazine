@@ -1,8 +1,10 @@
 import "./globals.css";
 import type { Metadata, Viewport } from "next";
 import { getLang } from "@/lib/lang";
-import { AutoRefresh, CardTransitions, Spotlight } from "@/components/client";
-import { REFRESH_SECONDS } from "@/lib/feeds";
+import { Suspense } from "react";
+import { AutoRefresh, CardTransitions, NavProgress, Spotlight } from "@/components/client";
+import { Header } from "@/components/Header";
+import { lastUpdated, REFRESH_SECONDS } from "@/lib/feeds";
 import { Manrope } from "next/font/google";
 
 // Self-hosted at build time (no request to Google at runtime), with Vietnamese glyphs.
@@ -29,6 +31,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang={lang} className={manrope.variable}>
       <body>
+        <Suspense fallback={null}>
+          <NavProgress />
+        </Suspense>
+        <Header lang={lang} updated={lastUpdated()} />
         {children}
         <AutoRefresh seconds={REFRESH_SECONDS} />
         <Spotlight />

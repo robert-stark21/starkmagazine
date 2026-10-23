@@ -1,11 +1,10 @@
 import Link from "next/link";
 import { imageSrcSet, imgSrc, SIZES } from "@/lib/img";
 import { ShinyText } from "@/components/BlurText";
-import { getAllArticles, hasUntranslated, lastUpdated, localize } from "@/lib/feeds";
+import { getAllArticles, hasUntranslated, localize } from "@/lib/feeds";
 import { RefreshSoon } from "@/components/client";
 import { CATEGORIES } from "@/lib/sources";
 import { getLang, UI } from "@/lib/lang";
-import { Header } from "@/components/Header";
 import { ArticleCard } from "@/components/ArticleCard";
 
 export const dynamic = "force-dynamic";
@@ -35,7 +34,6 @@ export default async function Home() {
         <link rel="preload" as="image" href={imgSrc(hero.image)} imageSrcSet={imageSrcSet(hero.image)} imageSizes={SIZES.hero} fetchPriority="high" />
       )}
       {pending && <RefreshSoon />}
-      <Header lang={lang} updated={lastUpdated()} />
       <main className="wrap">
         {!hero ? (
           <p className="empty">{t.noArticles}</p>

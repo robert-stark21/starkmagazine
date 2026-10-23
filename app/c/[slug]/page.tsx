@@ -1,10 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getAllArticles, hasUntranslated, lastUpdated, localize } from "@/lib/feeds";
+import { getAllArticles, hasUntranslated, localize } from "@/lib/feeds";
 import { RefreshSoon } from "@/components/client";
 import { getCategory, MOODBOARD, SOURCES } from "@/lib/sources";
 import { getLang, UI } from "@/lib/lang";
-import { Header } from "@/components/Header";
 import { ArticleCard } from "@/components/ArticleCard";
 
 export const dynamic = "force-dynamic";
@@ -41,7 +40,6 @@ export default async function CategoryPage({
   return (
     <>
       {hasUntranslated(loc, lang) && <RefreshSoon />}
-      <Header lang={lang} active={slug} updated={lastUpdated()} />
       <main className="wrap">
         <div className="page-h" style={{ ["--c" as any]: cat.color }}>
           <h1>{cat[lang]}</h1>

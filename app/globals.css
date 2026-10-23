@@ -414,3 +414,24 @@ a, button { -webkit-tap-highlight-color: transparent; }
   .detail h1 { font-size: 28px; line-height: 1.12; }
   .dek { font-size: 17px; }
 }
+
+/* ---------- Tap feedback ---------- */
+/* Top bar: starts on tap, fills when the new page shows. */
+.navbar { position: fixed; inset: 0 0 auto 0; height: 2.5px; z-index: 40; pointer-events: none; background: #cefe0c; transform-origin: 0 50%; transform: scaleX(0); opacity: 0; }
+.navbar.busy { opacity: 1; animation: navbar 8s cubic-bezier(.1, .7, .2, 1) forwards; }
+.navbar.done { opacity: 0; transform: scaleX(1); transition: transform .2s ease, opacity .25s ease .15s; }
+@keyframes navbar { 0% { transform: scaleX(0); } 6% { transform: scaleX(.35); } 100% { transform: scaleX(.92); } }
+@media (prefers-color-scheme: light) { .navbar { background: #1c1c1c; } }
+
+/* Instant pressed states (no wait for the page). */
+a, button { touch-action: manipulation; }
+.cats a { position: relative; }
+.cats a:active { color: var(--text); background: color-mix(in srgb, var(--text) 6%, transparent); }
+.chip, .lang button, .sec-h a, .crumb, .orig, .d-orig { transition: transform .12s ease, background-color .15s, color .15s; }
+.chip:active, .lang button:active, .orig:active { transform: scale(.94); }
+.sec-h a:active, .crumb:active { opacity: .6; }
+.card.compact:active h3 { opacity: .65; }
+@media (hover: none) {
+  .card:active { transform: scale(.975); }
+  .grid > .card:active, .card.compact:active { transform: none; background: color-mix(in srgb, var(--text) 4%, transparent); }
+}

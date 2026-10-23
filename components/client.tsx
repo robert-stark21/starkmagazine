@@ -1,6 +1,7 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
-import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import Link from "next/link";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { imgSrc } from "@/lib/img";
 
 export function LangToggle({ lang }: { lang: "vi" | "en" }) {
@@ -160,7 +161,9 @@ export function CardTransitions() {
       doc.startViewTransition!(async () => {
         title.style.viewTransitionName = "";
         router.push(href);
-        await waitFor(() => location.pathname === href && !!document.querySelector(".detail h1"));
+        // The page is frozen while a view transition waits, so wait only briefly: if the
+        // article is slow, the transition ends on its loading skeleton instead.
+        await waitFor(() => location.pathname === href && !!document.querySelector(".detail h1"), 380);
       });
     };
 
@@ -293,14 +296,107 @@ export function HlsVideo({ src, poster }: { src: string; poster?: string }) {
   return <video ref={ref} poster={poster} controls preload="none" playsInline />;
 }
 
-/** Keeps the active category tab in view on narrow screens, where the menu scrolls sideways. */
-export function ActiveTab() {
+
+// The category of the article being read, so the menu can highlight it on /a/ pages.
+let articleCat: string | null = null;
+const catSubs = new Set<() => void>();
+const setArticleCat = (v: string | null) => { articleCat = v; catSubs.forEach((f) => f()); };
+
+/** Rendered by the article page: tells the menu which category to highlight. */
+export function ActiveCategory({ slug }: { slug: string }) {
   useEffect(() => {
-    const row = document.querySelector<HTMLElement>(".cats .row");
-    const on = row?.querySelector<HTMLElement>("a.on");
-    if (!row || !on) return;
-    const left = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;
-    row.scrollTo({ left: Math.max(0, left), behavior: "instant" as ScrollBehavior });
-  });
+    setArticleCat(slug);
+    return () => setArticleCat(null);
+  }, [slug]);
   return null;
+}
+
+/**
+ * Category menu. It lives in the root layout, so it stays put between pages (no jump back
+ * to the start of the row). A tapped tab turns active at once, before the page arrives,
+ * and the row glides to keep the active tab in view.
+ */
+export function CatNav({ items }: { items: { href: string; slug: string; label: string; color?: string }[] }) {
+  const pathname = usePathname();
+  const art = useSyncExternalStore(
+    (f) => { catSubs.add(f); return () => { catSubs.delete(f); }; },
+    () => articleCat,
+    () => null
+  );
+  const [tapped, setTapped] = useState<string | null>(null);
+  useEffect(() => setTapped(null), [pathname]);
+  const current = pathname === "/" ? "" : pathname.startsWith("/c/") ? pathname.split("/")[2] : art;
+  const active = tapped ?? current;
+
+  const row = useRef<HTMLDivElement>(null);
+  const first = useRef(true);
+  useEffect(() => {
+    const el = row.current;
+    const on = el?.querySelector<HTMLElement>("a.on");
+    if (!el || !on) return;
+    const left = Math.max(0, on.offsetLeft - (el.clientWidth - on.offsetWidth) / 2);
+    el.scrollTo({ left, behavior: first.current ? ("instant" as ScrollBehavior) : "smooth" });
+    first.current = false;
+  }, [active]);
+
+  return (
+    <nav className="cats">
+      <div className="wrap row" ref={row}>
+        {items.map((c) => (
+          <Link
+            key={c.slug}
+            href={c.href}
+            className={active === c.slug ? "on" : ""}
+            style={c.color ? { ["--c" as any]: c.color } : undefined}
+            onClick={() => setTapped(c.slug)}
+          >
+            {c.label}
+          </Link>
+        ))}
+      </div>
+    </nav>
+  );
+}
+
+/**
+ * Thin bar at the top that starts the moment a link is tapped and completes when the new
+ * page shows, so every tap gets visible feedback even when the page takes a moment.
+ */
+export function NavProgress() {
+  const pathname = usePathname();
+  const search = useSearchParams().toString();
+  const [state, setState] = useState<"idle" | "busy" | "done">("idle");
+
+  useEffect(() => {
+    const onClick = (e: MouseEvent) => {
+      if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
+      const a = (e.target as Element | null)?.closest?.<HTMLAnchorElement>("a[href]");
+      if (!a || a.target || a.origin !== location.origin) return;
+      if (a.pathname + a.search === location.pathname + location.search) return;
+      setState("busy");
+    };
+    document.addEventListener("click", onClick, true);
+    return () => document.removeEventListener("click", onClick, true);
+  }, []);
+
+  // The URL changes as soon as the loading skeleton shows; finish once the skeleton is gone.
+  useEffect(() => {
+    let t: ReturnType<typeof setTimeout>;
+    const check = () => {
+      if (document.querySelector("main .sk")) { t = setTimeout(check, 100); return; }
+      setState((s) => (s === "busy" ? "done" : s));
+      t = setTimeout(() => setState((s) => (s === "done" ? "idle" : s)), 400);
+    };
+    check();
+    return () => clearTimeout(t);
+  }, [pathname, search]);
+
+  // Safety net: never leave the bar running (e.g. a navigation that was cancelled).
+  useEffect(() => {
+    if (state !== "busy") return;
+    const t = setTimeout(() => setState("idle"), 10000);
+    return () => clearTimeout(t);
+  }, [state]);
+
+  return <div className={`navbar ${state}`} aria-hidden="true" />;
 }

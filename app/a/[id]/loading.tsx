@@ -1,14 +1,9 @@
-import { Header } from "@/components/Header";
-import { lastUpdated } from "@/lib/feeds";
-import { getLang } from "@/lib/lang";
 import { ArticleBodySkeleton } from "@/components/Skeletons";
 
 /** Shown instantly when you open an article, until its top part is ready. */
-export default async function Loading() {
-  const lang = await getLang();
+export default function Loading() {
   return (
     <>
-      <Header lang={lang} updated={lastUpdated()} />
       <main className="wrap">
         <article className="detail">
           <div className="d-head">

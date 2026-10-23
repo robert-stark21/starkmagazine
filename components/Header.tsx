@@ -1,10 +1,10 @@
 import Link from "next/link";
 import { CATEGORIES, type Lang } from "@/lib/sources";
 import { UI } from "@/lib/lang";
-import { ActiveTab, LangToggle } from "./client";
+import { CatNav, LangToggle } from "./client";
 import { Logo } from "./Logo";
 
-export function Header({ lang, active, updated }: { lang: Lang; active?: string; updated: Date }) {
+export function Header({ lang, updated }: { lang: Lang; updated: Date }) {
   const t = UI[lang];
   const today = new Intl.DateTimeFormat(lang === "vi" ? "vi-VN" : "en-US", {
     weekday: "long", day: "numeric", month: "long", year: "numeric", timeZone: "Asia/Ho_Chi_Minh",
@@ -22,17 +22,12 @@ export function Header({ lang, active, updated }: { lang: Lang; active?: string;
           <LangToggle lang={lang} />
         </div>
       </div>
-      <nav className="cats">
-        <div className="wrap row">
-          <Link href="/" className={!active ? "on" : ""}>{t.home}</Link>
-          {CATEGORIES.map((c) => (
-            <Link key={c.slug} href={`/c/${c.slug}`} className={active === c.slug ? "on" : ""} style={{ ["--c" as any]: c.color }}>
-              {c[lang]}
-            </Link>
-          ))}
-        </div>
-      </nav>
-      <ActiveTab />
+      <CatNav
+        items={[
+          { href: "/", slug: "", label: t.home },
+          ...CATEGORIES.map((c) => ({ href: `/c/${c.slug}`, slug: c.slug, label: c[lang], color: c.color })),
+        ]}
+      />
     </header>
   );
 }
