@@ -331,5 +331,6 @@ html { scroll-behavior: smooth; }
 
 /* Logo */
 .brand { display: flex; align-items: center; }
-.brand .logo { height: 28px; width: auto; display: block; color: var(--text); }
-@media (max-width: 760px) { .brand .logo { height: 24px; } }
+.brand .logo { height: 30px; width: auto; display: block; color: #1c1c1c; }
+@media (prefers-color-scheme: dark) { .brand .logo { color: #fff; } }
+@media (max-width: 760px) { .brand .logo { height: 26px; } }
