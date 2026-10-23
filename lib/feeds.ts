@@ -137,7 +137,7 @@ async function pageImage(link: string): Promise<string | undefined> {
   let found: string | null = null;
   try {
     const res = await fetch(link, {
-      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36" },
+      headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36" },
       cache: "no-store",
       signal: AbortSignal.timeout(8000),
     });

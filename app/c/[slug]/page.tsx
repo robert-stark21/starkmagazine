@@ -29,7 +29,8 @@ export default async function CategoryPage({
     .filter((a) => (moodboard ? a.image : true))
     .slice(0, moodboard ? 120 : 60);
   const loc = await localize(items, lang);
-  const sourceCount = SOURCES.filter((s) => s.category === slug).length;
+  // Distinct publishers: RGB has several section feeds in one category.
+  const sourceCount = new Set(SOURCES.filter((s) => s.category === slug).map((s) => s.name)).size;
 
   const chip = (key: string | undefined, label: string) => (
     <Link href={key ? `/c/${slug}?r=${key}` : `/c/${slug}`} className={`chip ${r === key ? "on" : ""}`}>

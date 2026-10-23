@@ -19,7 +19,8 @@ const MAX_VIDEOS = 8;
 
 function fetchPage(url: string) {
   return fetch(url, {
-    headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 Chrome/124 Safari/537.36" },
+    // A complete browser user agent: some sites (Muse by Clios) refuse shortened ones.
+    headers: { "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36" },
     next: { revalidate: 3600 },
     signal: AbortSignal.timeout(12000),
   });
@@ -58,6 +59,8 @@ function fixImages(document: any) {
       img.getAttribute("data-src"),
       img.getAttribute("data-lazy-src"),
       img.getAttribute("data-full-src"),
+      img.getAttribute("nitro-lazy-src"), // NitroPack lazy loading (Muse by Clios)
+      bestFromSrcset(img.getAttribute("nitro-lazy-srcset")),
       bestFromSrcset(img.getAttribute("data-srcset")),
       bestFromSrcset(img.getAttribute("srcset")),
       fromPicture,
@@ -135,6 +138,16 @@ function imageKey(u: string): string {
  */
 type Marked = { src: string; spare: boolean };
 
+/**
+ * Sidebars, menus, footers and the site header. An article's own header (the title area,
+ * which on RGB holds the featured ad video) sits inside <article> and is not site chrome.
+ */
+function inSiteChrome(el: any): boolean {
+  if (el.closest("aside, nav, footer")) return true;
+  const header = el.closest("header");
+  return !!header && !header.closest("article, main, [itemprop=articleBody]");
+}
+
 /** The story body on sites we know (Thanh Niên, Tuổi Trẻ, VnExpress, WordPress, ...). */
 const BODY =
   ".detail-content, .detail__content, .fck_detail, .singular-content, .entry-content, .article-body, .article__body, .article-content, .post-content, [itemprop=articleBody]";
@@ -190,7 +203,7 @@ function markImages(document: any, pageUrl: string): Marked[] {
     // (e.g. a photo panel beside the text). They are added at the end if Readability drops them.
     const spare =
       (hasMain ? !!img.closest(MAIN) : true) &&
-      !img.closest("aside, nav, footer, header") &&
+      !inSiteChrome(img) &&
       (!link || /\.(jpe?g|png|webp|gif)(\?|$)/i.test(link));
     const marker = `⟦IMG${srcs.length}⟧`;
     srcs.push({ src, spare });
@@ -263,7 +276,9 @@ function markVideos(document: any, pageUrl: string): Video[] {
     const tag = el.tagName;
     let v: Omit<Video, "spare"> | undefined;
     if (tag === "IFRAME") {
-      v = videoFromUrl(el.getAttribute("src") || el.getAttribute("data-src") || el.getAttribute("data-lazy-src"), pageUrl);
+      // A lazy iframe keeps its real address in a data attribute; src is then about:blank.
+      const iframeSrc = [el.getAttribute("src"), el.getAttribute("data-src"), el.getAttribute("data-lazy-src"), el.getAttribute("nitro-lazy-src")];
+      for (const s of iframeSrc) if ((v = videoFromUrl(s, pageUrl))) break;
     } else if (tag === "VIDEO") {
       const sources = [el.getAttribute("src"), el.getAttribute("data-src"), ...Array.from(el.querySelectorAll("source")).map((s: any) => s.getAttribute("src") || s.getAttribute("data-src"))];
       for (const s of sources) if ((v = videoFromUrl(s, pageUrl))) break;
@@ -281,7 +296,7 @@ function markVideos(document: any, pageUrl: string): Video[] {
     if (!v || inPromo(el)) continue;
     // Only real players (not muted loops) are added at the end when Readability drops them.
     const spare =
-      v.provider !== "file" && (hasMain ? !!el.closest(MAIN) : true) && !el.closest("aside, nav, footer, header");
+      v.provider !== "file" && (hasMain ? !!el.closest(MAIN) : true) && !inSiteChrome(el);
     // Replace the whole player box (VnExpress hides the <video> inside a box with a cover image).
     const holder = el.closest(".box_embed_video_parent, figure") ?? el.closest("p, li") ?? el;
     if (!v.poster) {
@@ -335,6 +350,7 @@ const PROMO_STRONG = new RegExp(
     "\\bfree .{0,30}highlights\\b", "\\bsky sports (?:deals|offers)\\b", "\\b(?:with ?out|no) (?:a )?contract\\b",
     "^read (?:more|next)\\b", "^published: .{0,40}\\d{4}", "^related:", "\\bdownload (?:the|our) app\\b", "\\bclick here\\b", "\\bafter newsletter promotion\\b", "\\byou'll now receive updates\\b", "^cite: ",
     "^(?:xem thêm|đọc thêm|tin liên quan)\\s*:", "đăng ký nhận bản tin", "tải ứng dụng",
+    "^[✦★►▶»•\\s]+xem thêm\\b", // RGB: "✦ Xem thêm cảm hứng nhà đẹp ... cùng ARC Vibes"
   ].join("|"),
   "i"
 );
